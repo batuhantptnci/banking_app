@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:banking_app/services/api_service.dart';
+
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -181,7 +183,27 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: () async {
+              try {
+                final message = await ApiService.getHello();
+
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(message),
+                  ),
+                );
+              } catch (e) {
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Bağlantı hatası: $e'),
+                  ),
+                );
+              }
+            },
             icon: const Icon(
               Icons.notifications_none_rounded,
               color: Colors.white,
