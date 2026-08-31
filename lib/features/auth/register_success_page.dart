@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../home/home_page.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../home/home_page.dart';
 
 class RegisterSuccessPage extends StatelessWidget {
   const RegisterSuccessPage({super.key});
@@ -12,11 +12,11 @@ class RegisterSuccessPage extends StatelessWidget {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF4F4F4),
+        backgroundColor: AppColors.background,
         body: SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
           child: Column(
             children: [
-              // RED SUCCESS HERO
               Container(
                 width: double.infinity,
                 height: 410,
@@ -25,9 +25,9 @@ class RegisterSuccessPage extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Color(0xFFFF3B35),
-                      Color(0xFFED1C24),
-                      Color(0xFFC81019),
+                      AppColors.navy,
+                      AppColors.navyLight,
+                      Color(0xFF164A5A),
                     ],
                   ),
                 ),
@@ -35,13 +35,19 @@ class RegisterSuccessPage extends StatelessWidget {
                   children: [
                     Positioned(
                       top: -75,
-                      right: -65,
+                      right: -70,
                       child: Container(
-                        width: 240,
-                        height: 240,
+                        width: 250,
+                        height: 250,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: 0.09),
+                          border: Border.all(
+                            color:
+                            Colors.white.withValues(
+                              alpha: 0.06,
+                            ),
+                            width: 44,
+                          ),
                         ),
                       ),
                     ),
@@ -53,36 +59,39 @@ class RegisterSuccessPage extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              width: 94,
-                              height: 94,
+                              width: 98,
+                              height: 98,
                               padding: const EdgeInsets.all(7),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withValues(
-                                      alpha: 0.14,
+                                    color: Colors.black
+                                        .withValues(
+                                      alpha: 0.16,
                                     ),
                                     blurRadius: 28,
-                                    offset: const Offset(0, 12),
+                                    offset:
+                                    const Offset(0, 12),
                                   ),
                                 ],
                               ),
                               child: Container(
-                                decoration: const BoxDecoration(
+                                decoration:
+                                const BoxDecoration(
                                   color: AppColors.primary,
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
                                   Icons.check_rounded,
                                   color: Colors.white,
-                                  size: 46,
+                                  size: 48,
                                 ),
                               ),
                             ),
 
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 25),
 
                             const Text(
                               'Hesabın hazır!',
@@ -97,12 +106,11 @@ class RegisterSuccessPage extends StatelessWidget {
                             const SizedBox(height: 9),
 
                             const Text(
-                              'IBT Digital Banking dünyasına hoş geldin.',
+                              'IBT Bank dünyasına hoş geldin.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: Color(0xFFFFDADA),
+                                color: Colors.white70,
                                 fontSize: 14,
-                                height: 1.4,
                               ),
                             ),
                           ],
@@ -113,11 +121,12 @@ class RegisterSuccessPage extends StatelessWidget {
                 ),
               ),
 
-              // CARD OVERLAP
               Transform.translate(
-                offset: const Offset(0, -46),
+                offset: const Offset(0, -48),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 22,
+                  ),
                   child: Container(
                     width: double.infinity,
                     padding: const EdgeInsets.fromLTRB(
@@ -129,42 +138,51 @@ class RegisterSuccessPage extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(28),
+                      border: Border.all(
+                        color: AppColors.border,
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
+                          color:
+                          Colors.black.withValues(
+                            alpha: 0.075,
+                          ),
                           blurRadius: 30,
-                          offset: const Offset(0, 14),
+                          offset:
+                          const Offset(0, 14),
                         ),
                       ],
                     ),
                     child: Column(
                       children: [
                         const _InfoRow(
-                          icon: Icons.account_balance_wallet_outlined,
-                          title: 'Dijital hesabın oluşturuldu',
+                          icon: Icons
+                              .account_balance_wallet_outlined,
+                          title:
+                          'Dijital hesabın oluşturuldu',
                           subtitle:
                           'Hesaplarını ve bakiyeni tek ekrandan yönet.',
                         ),
 
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 21),
 
                         const _InfoRow(
                           icon: Icons.shield_outlined,
                           title: 'Güvenliğin aktif',
                           subtitle:
-                          'Çok katmanlı güvenlik hesabını koruyor.',
+                          'IBT güvenlik sistemi hesabını koruyor.',
                         ),
 
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 21),
 
                         const _InfoRow(
                           icon: Icons.bolt_rounded,
                           title: 'Her şey hazır',
                           subtitle:
-                          'IBT bankacılık deneyimine başlayabilirsin.',
+                          'Bankacılık deneyimine başlayabilirsin.',
                         ),
 
-                        const SizedBox(height: 26),
+                        const SizedBox(height: 27),
 
                         SizedBox(
                           width: double.infinity,
@@ -174,33 +192,38 @@ class RegisterSuccessPage extends StatelessWidget {
                               Navigator.pushAndRemoveUntil(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const HomePage(),
+                                  builder: (_) =>
+                                  const HomePage(),
                                 ),
                                     (route) => false,
                               );
                             },
                             style: ElevatedButton.styleFrom(
                               elevation: 0,
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
+                              backgroundColor:
+                              AppColors.navy,
+                              foregroundColor:
+                              Colors.white,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(17),
+                                borderRadius:
+                                BorderRadius.circular(17),
                               ),
                             ),
                             child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisAlignment:
+                              MainAxisAlignment.center,
                               children: [
                                 Text(
                                   'Bankacılığa Başla',
                                   style: TextStyle(
                                     fontSize: 15,
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight:
+                                    FontWeight.w800,
                                   ),
                                 ),
                                 SizedBox(width: 9),
                                 Icon(
                                   Icons.arrow_forward_rounded,
-                                  size: 20,
                                 ),
                               ],
                             ),
@@ -215,17 +238,15 @@ class RegisterSuccessPage extends StatelessWidget {
               Transform.translate(
                 offset: const Offset(0, -20),
                 child: const Text(
-                  'IBT  •  DIGITAL BANKING',
+                  'IBT BANK  •  DIGITAL BANKING',
                   style: TextStyle(
-                    color: Color(0xFFAAAAAA),
+                    color: AppColors.textSecondary,
                     fontSize: 9,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.7,
                   ),
                 ),
               ),
-
-              const SizedBox(height: 12),
             ],
           ),
         ),
@@ -250,16 +271,16 @@ class _InfoRow extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 48,
-          height: 48,
+          width: 50,
+          height: 50,
           decoration: BoxDecoration(
-            color: const Color(0xFFFFECEE),
-            borderRadius: BorderRadius.circular(15),
+            color: AppColors.softPrimary,
+            borderRadius: BorderRadius.circular(16),
           ),
           child: Icon(
             icon,
             color: AppColors.primary,
-            size: 23,
+            size: 24,
           ),
         ),
 
@@ -273,7 +294,7 @@ class _InfoRow extends StatelessWidget {
                 title,
                 style: const TextStyle(
                   color: AppColors.textPrimary,
-                  fontSize: 13,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -283,9 +304,9 @@ class _InfoRow extends StatelessWidget {
               Text(
                 subtitle,
                 style: const TextStyle(
-                  color: Color(0xFF858585),
+                  color: AppColors.textSecondary,
                   fontSize: 11.5,
-                  height: 1.35,
+                  height: 1.4,
                 ),
               ),
             ],

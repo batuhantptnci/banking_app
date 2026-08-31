@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'features/auth/session_gate.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/login_page.dart';
 
@@ -15,7 +15,7 @@ class BankingApp extends StatelessWidget {
 
       scrollBehavior: const NoOverscrollBehavior(),
 
-      home: const LoginPage(),
+      home: const SessionGate(),
     );
   }
 }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'register_success_page.dart';
 
 import '../../core/theme/app_colors.dart';
+import 'register_success_page.dart';
 
 class RegisterSecurityPage extends StatefulWidget {
   const RegisterSecurityPage({super.key});
@@ -14,51 +14,62 @@ class RegisterSecurityPage extends StatefulWidget {
 
 class _RegisterSecurityPageState
     extends State<RegisterSecurityPage> {
-  String _verificationCode = '';
+  final TextEditingController _codeController =
+  TextEditingController();
+
   bool _biometricEnabled = true;
 
-  bool get _isCodeValid => _verificationCode.length == 6;
+  bool get _isCodeValid =>
+      _codeController.text.length == 6;
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF4F4F4),
+        backgroundColor: AppColors.background,
         body: Stack(
           children: [
             Container(
-              height: 300,
+              height: 310,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Color(0xFFFF3B35),
-                    Color(0xFFED1C24),
-                    Color(0xFFC81019),
+                    AppColors.navy,
+                    AppColors.navyLight,
+                    Color(0xFF164A5A),
                   ],
                 ),
               ),
             ),
 
             Positioned(
-              top: -70,
-              right: -60,
+              right: -70,
+              top: -80,
               child: Container(
-                width: 220,
-                height: 220,
+                width: 240,
+                height: 240,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.09),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.06),
+                    width: 40,
+                  ),
                 ),
               ),
             ),
 
             SafeArea(
               child: SingleChildScrollView(
-                keyboardDismissBehavior:
-                ScrollViewKeyboardDismissBehavior.onDrag,
+                physics: const ClampingScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(
                   20,
                   14,
@@ -70,40 +81,17 @@ class _RegisterSecurityPageState
                     Row(
                       children: [
                         _GlassButton(
-                          icon: Icons.arrow_back_rounded,
-                          onTap: () => Navigator.pop(context),
+                          onTap: () =>
+                              Navigator.pop(context),
                         ),
 
                         const Spacer(),
 
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 13,
-                            vertical: 7,
-                          ),
-                          decoration: BoxDecoration(
-                            color:
-                            Colors.white.withValues(alpha: 0.14),
-                            borderRadius:
-                            BorderRadius.circular(100),
-                            border: Border.all(
-                              color:
-                              Colors.white.withValues(alpha: 0.18),
-                            ),
-                          ),
-                          child: const Text(
-                            '2 / 2',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
+                        const _StepPill(),
                       ],
                     ),
 
-                    const SizedBox(height: 25),
+                    const SizedBox(height: 28),
 
                     const Align(
                       alignment: Alignment.centerLeft,
@@ -111,7 +99,7 @@ class _RegisterSecurityPageState
                         'Son bir adım\nkaldı.',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 31,
+                          fontSize: 32,
                           height: 1.08,
                           fontWeight: FontWeight.w800,
                           letterSpacing: -0.8,
@@ -126,7 +114,7 @@ class _RegisterSecurityPageState
                       child: Text(
                         'Hesabını güvence altına al ve IBT deneyimini başlat.',
                         style: TextStyle(
-                          color: Color(0xFFFFDADA),
+                          color: Colors.white70,
                           fontSize: 14,
                           height: 1.45,
                         ),
@@ -137,19 +125,16 @@ class _RegisterSecurityPageState
 
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(
-                        22,
-                        24,
-                        22,
-                        25,
-                      ),
+                      padding: const EdgeInsets.all(22),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(28),
+                        border: Border.all(
+                          color: AppColors.border,
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color:
-                            Colors.black.withValues(alpha: 0.075),
+                            color: Colors.black.withValues(alpha: 0.07),
                             blurRadius: 28,
                             offset: const Offset(0, 12),
                           ),
@@ -159,15 +144,9 @@ class _RegisterSecurityPageState
                         crossAxisAlignment:
                         CrossAxisAlignment.start,
                         children: [
-                          const Row(
-                            children: [
-                              _CompletedStep(),
-                              _StepLine(active: true),
-                              _ActiveStep(),
-                            ],
-                          ),
+                          const _ProgressHeader(),
 
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 26),
 
                           const Text(
                             'Telefonunu Doğrula',
@@ -175,75 +154,81 @@ class _RegisterSecurityPageState
                               color: AppColors.textPrimary,
                               fontSize: 23,
                               fontWeight: FontWeight.w800,
-                              letterSpacing: -0.4,
                             ),
                           ),
 
-                          const SizedBox(height: 7),
+                          const SizedBox(height: 8),
 
                           const Text(
-                            '05•• ••• •• 42 numaralı telefonuna gönderilen 6 haneli kodu gir.',
+                            'Telefonuna gönderilen 6 haneli doğrulama kodunu gir.',
                             style: TextStyle(
-                              color: Color(0xFF858585),
+                              color: AppColors.textSecondary,
                               fontSize: 13,
-                              height: 1.45,
+                              height: 1.4,
                             ),
                           ),
 
-                          const SizedBox(height: 25),
+                          const SizedBox(height: 24),
 
                           TextField(
-                            keyboardType: TextInputType.number,
+                            controller: _codeController,
+                            keyboardType:
+                            TextInputType.number,
                             textAlign: TextAlign.center,
+                            maxLength: 6,
                             inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                              LengthLimitingTextInputFormatter(6),
+                              FilteringTextInputFormatter
+                                  .digitsOnly,
                             ],
-                            onChanged: (value) {
-                              setState(() {
-                                _verificationCode = value;
-                              });
+                            onChanged: (_) {
+                              setState(() {});
                             },
                             style: const TextStyle(
-                              fontSize: 24,
-                              letterSpacing: 12,
-                              fontWeight: FontWeight.w700,
                               color: AppColors.textPrimary,
+                              fontSize: 27,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 13,
                             ),
                             decoration: InputDecoration(
-                              hintText: '000000',
                               counterText: '',
+                              hintText: '000000',
                               hintStyle: const TextStyle(
-                                fontSize: 24,
-                                letterSpacing: 12,
-                                color: Color(0xFFC5C5C5),
+                                color: Color(0xFFCBD1D6),
+                                fontSize: 27,
+                                letterSpacing: 13,
+                                fontWeight: FontWeight.w700,
                               ),
                               filled: true,
-                              fillColor: const Color(0xFFF8F8F8),
-                              contentPadding:
-                              const EdgeInsets.symmetric(
-                                vertical: 18,
-                                horizontal: 12,
-                              ),
-                              enabledBorder: OutlineInputBorder(
+                              fillColor:
+                              const Color(0xFFF7F9FA),
+                              border: OutlineInputBorder(
                                 borderRadius:
-                                BorderRadius.circular(16),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFE8E8E8),
+                                BorderRadius.circular(17),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder:
+                              OutlineInputBorder(
+                                borderRadius:
+                                BorderRadius.circular(17),
+                                borderSide:
+                                const BorderSide(
+                                  color: AppColors.border,
                                 ),
                               ),
-                              focusedBorder: OutlineInputBorder(
+                              focusedBorder:
+                              OutlineInputBorder(
                                 borderRadius:
-                                BorderRadius.circular(16),
-                                borderSide: const BorderSide(
+                                BorderRadius.circular(17),
+                                borderSide:
+                                const BorderSide(
                                   color: AppColors.primary,
-                                  width: 1.4,
+                                  width: 1.5,
                                 ),
                               ),
                             ),
                           ),
 
-                          const SizedBox(height: 7),
+                          const SizedBox(height: 5),
 
                           Align(
                             alignment: Alignment.centerRight,
@@ -253,112 +238,114 @@ class _RegisterSecurityPageState
                                 'Kodu yeniden gönder',
                                 style: TextStyle(
                                   color: AppColors.primary,
-                                  fontSize: 12,
                                   fontWeight: FontWeight.w700,
+                                  fontSize: 12.5,
                                 ),
                               ),
                             ),
                           ),
 
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 10),
 
                           const Divider(
-                            color: Color(0xFFEEEEEE),
+                            color: AppColors.border,
                           ),
 
                           const SizedBox(height: 15),
 
-                          Row(
-                            children: [
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color:
-                                  const Color(0xFFFFECEE),
-                                  borderRadius:
-                                  BorderRadius.circular(14),
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: AppColors.softPrimary,
+                              borderRadius:
+                              BorderRadius.circular(18),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 46,
+                                  height: 46,
+                                  decoration:
+                                  const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.fingerprint_rounded,
+                                    color: AppColors.primary,
+                                    size: 27,
+                                  ),
                                 ),
-                                child: const Icon(
-                                  Icons.fingerprint_rounded,
-                                  color: AppColors.primary,
-                                  size: 25,
-                                ),
-                              ),
 
-                              const SizedBox(width: 13),
+                                const SizedBox(width: 13),
 
-                              const Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Biyometrik Giriş',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight:
-                                        FontWeight.w700,
-                                        color:
-                                        AppColors.textPrimary,
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Biyometrik Giriş',
+                                        style: TextStyle(
+                                          color: AppColors
+                                              .textPrimary,
+                                          fontSize: 13.5,
+                                          fontWeight:
+                                          FontWeight.w700,
+                                        ),
                                       ),
-                                    ),
-                                    SizedBox(height: 3),
-                                    Text(
-                                      'Sonraki girişlerini daha hızlı yap.',
-                                      style: TextStyle(
-                                        fontSize: 11.5,
-                                        color:
-                                        Color(0xFF858585),
+                                      SizedBox(height: 3),
+                                      Text(
+                                        'Sonraki girişlerini daha hızlı yap.',
+                                        style: TextStyle(
+                                          color: AppColors
+                                              .textSecondary,
+                                          fontSize: 11.5,
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
 
-                              Switch(
-                                value: _biometricEnabled,
-                                activeTrackColor:
-                                AppColors.primary,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _biometricEnabled = value;
-                                  });
-                                },
-                              ),
-                            ],
+                                Switch(
+                                  value: _biometricEnabled,
+                                  activeTrackColor:
+                                  AppColors.primary,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _biometricEnabled =
+                                          value;
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
 
-                          const SizedBox(height: 22),
+                          const SizedBox(height: 16),
 
                           Container(
-                            width: double.infinity,
                             padding: const EdgeInsets.all(15),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF8F8F8),
+                              color: const Color(0xFFF5F7F9),
                               borderRadius:
-                              BorderRadius.circular(16),
+                              BorderRadius.circular(17),
                             ),
                             child: const Row(
-                              crossAxisAlignment:
-                              CrossAxisAlignment.start,
                               children: [
                                 Icon(
                                   Icons.shield_outlined,
                                   color: AppColors.primary,
-                                  size: 21,
                                 ),
-
-                                SizedBox(width: 11),
-
+                                SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
                                     'Hesabın çok katmanlı güvenlik ve şifreli bağlantı ile korunacaktır.',
                                     style: TextStyle(
-                                      color:
-                                      Color(0xFF727272),
+                                      color: AppColors
+                                          .textSecondary,
                                       fontSize: 11.5,
-                                      height: 1.45,
+                                      height: 1.4,
                                     ),
                                   ),
                                 ),
@@ -366,7 +353,7 @@ class _RegisterSecurityPageState
                             ),
                           ),
 
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 22),
 
                           SizedBox(
                             width: double.infinity,
@@ -377,7 +364,8 @@ class _RegisterSecurityPageState
                                 Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => const RegisterSuccessPage(),
+                                    builder: (_) =>
+                                    const RegisterSuccessPage(),
                                   ),
                                 );
                               }
@@ -385,13 +373,14 @@ class _RegisterSecurityPageState
                               style: ElevatedButton.styleFrom(
                                 elevation: 0,
                                 backgroundColor:
-                                AppColors.primary,
+                                AppColors.navy,
+                                foregroundColor:
+                                Colors.white,
                                 disabledBackgroundColor:
-                                const Color(0xFFFFC4C7),
-                                foregroundColor: Colors.white,
+                                const Color(0xFFD8DEE3),
                                 shape: RoundedRectangleBorder(
                                   borderRadius:
-                                  BorderRadius.circular(16),
+                                  BorderRadius.circular(17),
                                 ),
                               ),
                               child: const Row(
@@ -401,15 +390,13 @@ class _RegisterSecurityPageState
                                   Text(
                                     'Hesabımı Oluştur',
                                     style: TextStyle(
-                                      fontSize: 15,
                                       fontWeight:
-                                      FontWeight.w700,
+                                      FontWeight.w800,
                                     ),
                                   ),
-                                  SizedBox(width: 9),
+                                  SizedBox(width: 8),
                                   Icon(
                                     Icons.arrow_forward_rounded,
-                                    size: 19,
                                   ),
                                 ],
                               ),
@@ -419,24 +406,23 @@ class _RegisterSecurityPageState
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 18),
 
                     const Row(
-                      mainAxisAlignment:
-                      MainAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
                           Icons.lock_outline_rounded,
-                          color: Color(0xFF8B8B8B),
+                          color: AppColors.primary,
                           size: 14,
                         ),
                         SizedBox(width: 6),
                         Text(
                           'IBT güvenli doğrulama sistemi',
                           style: TextStyle(
-                            color: Color(0xFF8B8B8B),
+                            color: AppColors.textSecondary,
                             fontSize: 10.5,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
@@ -453,106 +439,109 @@ class _RegisterSecurityPageState
 }
 
 class _GlassButton extends StatelessWidget {
-  final IconData icon;
   final VoidCallback onTap;
 
   const _GlassButton({
-    required this.icon,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          width: 43,
-          height: 43,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.18),
+    return InkWell(
+      borderRadius: BorderRadius.circular(17),
+      onTap: onTap,
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(17),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.18),
+          ),
+        ),
+        child: const Icon(
+          Icons.arrow_back_rounded,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+}
+
+class _StepPill extends StatelessWidget {
+  const _StepPill();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: 8,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.18),
+        ),
+      ),
+      child: const Text(
+        '2 / 2',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          fontSize: 11,
+        ),
+      ),
+    );
+  }
+}
+
+class _ProgressHeader extends StatelessWidget {
+  const _ProgressHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 42,
+          height: 42,
+          decoration: const BoxDecoration(
+            color: AppColors.primary,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.check_rounded,
+            color: Colors.white,
+          ),
+        ),
+
+        Expanded(
+          child: Container(
+            height: 3,
+            color: AppColors.primary,
+          ),
+        ),
+
+        Container(
+          width: 42,
+          height: 42,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: AppColors.primary,
+            shape: BoxShape.circle,
+          ),
+          child: const Text(
+            '2',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
             ),
           ),
-          child: Icon(
-            icon,
-            color: Colors.white,
-            size: 21,
-          ),
         ),
-      ),
-    );
-  }
-}
-
-class _CompletedStep extends StatelessWidget {
-  const _CompletedStep();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 28,
-      height: 28,
-      decoration: const BoxDecoration(
-        color: AppColors.primary,
-        shape: BoxShape.circle,
-      ),
-      child: const Icon(
-        Icons.check_rounded,
-        color: Colors.white,
-        size: 16,
-      ),
-    );
-  }
-}
-
-class _ActiveStep extends StatelessWidget {
-  const _ActiveStep();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 28,
-      height: 28,
-      decoration: const BoxDecoration(
-        color: AppColors.primary,
-        shape: BoxShape.circle,
-      ),
-      child: const Center(
-        child: Text(
-          '2',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StepLine extends StatelessWidget {
-  final bool active;
-
-  const _StepLine({
-    required this.active,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8),
-        height: 2,
-        color: active
-            ? AppColors.primary
-            : const Color(0xFFEEEEEE),
-      ),
+      ],
     );
   }
 }
