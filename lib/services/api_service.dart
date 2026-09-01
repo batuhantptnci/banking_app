@@ -1,5 +1,5 @@
 import 'dart:convert';
-
+import 'package:banking_app/models/account_model.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
@@ -206,7 +206,33 @@ class ApiService {
       return false;
     }
   }
+// ===========================================================================
+// ACCOUNTS
+// ===========================================================================
 
+  static Future<List<AccountModel>> getMyAccounts() async {
+    final response = await authenticatedGet('/api/accounts/me');
+
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+
+      if (decoded is! List) {
+        throw Exception('Geçersiz hesap verisi.');
+      }
+
+      return decoded
+          .map(
+            (item) => AccountModel.fromJson(
+          item as Map<String, dynamic>,
+        ),
+      )
+          .toList();
+    }
+
+    throw Exception(
+      'Hesaplar alınamadı (${response.statusCode})',
+    );
+  }
   // ===========================================================================
   // AUTHENTICATED GET
   // ===========================================================================

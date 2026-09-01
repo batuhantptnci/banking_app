@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:banking_app/services/api_service.dart';
-
+import 'package:banking_app/models/account_model.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -35,7 +35,41 @@ class _HomePageState extends State<HomePage> {
   ];
 
   int selectedTab = 0;
+  List<AccountModel> _accounts = [];
+  bool _accountsLoading = true;
+  String? _accountsError;
 
+  double get _totalBalance {
+    return _accounts.fold(
+      0,
+          (total, account) => total + account.balance,
+    );
+  }
+  String _formatWhole(double value) {
+    final whole = value.floor().toString();
+    final buffer = StringBuffer();
+
+    for (int i = 0; i < whole.length; i++) {
+      if (i > 0 && (whole.length - i) % 3 == 0) {
+        buffer.write('.');
+      }
+
+      buffer.write(whole[i]);
+    }
+
+    return buffer.toString();
+  }
+
+  String _formatDecimal(double value) {
+    final fixed = value.toStringAsFixed(2);
+    final decimal = fixed.split('.')[1];
+
+    return ',$decimal TL';
+  }
+
+  String _formatMoney(double value) {
+    return '${_formatWhole(value)}${_formatDecimal(value)}';
+  }
   Color get sectionColor {
     switch (selectedTab) {
       case 1:
@@ -65,7 +99,32 @@ class _HomePageState extends State<HomePage> {
         return 'Ürün, hesap veya işlem ara';
     }
   }
+  @override
+  void initState() {
+    super.initState();
+    _loadAccounts();
+  }
 
+  Future<void> _loadAccounts() async {
+    try {
+      final accounts = await ApiService.getMyAccounts();
+
+      if (!mounted) return;
+
+      setState(() {
+        _accounts = accounts;
+        _accountsLoading = false;
+        _accountsError = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _accountsLoading = false;
+        _accountsError = e.toString();
+      });
+    }
+  }
   @override
   void dispose() {
     _scrollController.dispose();
@@ -327,8 +386,12 @@ class _HomePageState extends State<HomePage> {
       case 1:
         return _heroContent(
           eyebrow: 'TOPLAM BAKİYE',
-          amount: '7.145.584.568',
-          decimal: ',78 TL',
+          amount: _accountsLoading
+              ? '—'
+              : _formatWhole(_totalBalance),
+          decimal: _accountsLoading
+              ? ''
+              : _formatDecimal(_totalBalance),
           selector: 'Vadesiz TL hesaplar',
           selectorIcon: Icons.account_balance_wallet_outlined,
           actions: const [
@@ -435,8 +498,12 @@ class _HomePageState extends State<HomePage> {
       default:
         return _heroContent(
           eyebrow: 'TOPLAM VARLIĞIM',
-          amount: '7.145.997',
-          decimal: ',98 TL',
+          amount: _accountsLoading
+              ? '—'
+              : _formatWhole(_totalBalance),
+          decimal: _accountsLoading
+              ? ''
+              : _formatDecimal(_totalBalance),
           selector: 'Tüm varlıklarım',
           selectorIcon: Icons.account_balance_rounded,
           actions: const [
@@ -705,32 +772,74 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildAccountsSection() {
+    if (_accountsLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_accountsError != null) {
+      return _sectionCard(
+        title: 'Vadesiz Hesaplar',
+        child: Column(
+          children: [
+            const Text(
+              'Hesap bilgileri alınamadı.',
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _accountsLoading = true;
+                  _accountsError = null;
+                });
+
+                _loadAccounts();
+              },
+              child: const Text('Tekrar Dene'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_accounts.isEmpty) {
+      return _sectionCard(
+        title: 'Vadesiz Hesaplar',
+        trailing: '0 hesap',
+        child: const Text(
+          'Henüz hesabın bulunmuyor.',
+        ),
+      );
+    }
+
     return Column(
       children: [
         _sectionCard(
           title: 'Vadesiz Hesaplar',
-          trailing: '2 hesap',
+          trailing: '${_accounts.length} hesap',
           child: Column(
             children: [
-              _accountRow(
-                icon: Icons.account_balance_wallet_outlined,
-                title: 'Kullanılabilir bakiye',
-                amount: '7.145.584.568,78 TL',
-                subtitle: 'Ana TL Hesabı  •  4821',
-              ),
-              const Divider(height: 28),
-              _accountRow(
-                icon: Icons.euro_rounded,
-                title: 'Kullanılabilir bakiye',
-                amount: '5.850.125,00 EUR',
-                subtitle: 'Döviz Hesabı  •  2931',
-              ),
+              for (int i = 0; i < _accounts.length; i++) ...[
+                _accountRow(
+                  icon: Icons.account_balance_wallet_outlined,
+                  title: 'Kullanılabilir bakiye',
+                  amount: _formatMoney(
+                    _accounts[i].balance,
+                  ),
+                  subtitle:
+                  'Vadesiz TL • ${_accounts[i].accountNumber}',
+                ),
+                if (i != _accounts.length - 1)
+                  const Divider(height: 28),
+              ],
             ],
           ),
         ),
-
         const SizedBox(height: 20),
-
         _buildNoticeBanner(
           icon: Icons.savings_outlined,
           text:
@@ -926,6 +1035,19 @@ class _HomePageState extends State<HomePage> {
   // ---------------------------------------------------------------------------
 
   Widget _buildAccountsCarousel() {
+    if (_accountsLoading) {
+      return const SizedBox(
+        height: 184,
+        child: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_accounts.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return SizedBox(
       height: 184,
       child: PageView(
@@ -933,32 +1055,16 @@ class _HomePageState extends State<HomePage> {
           viewportFraction: 0.92,
         ),
         padEnds: false,
-        children: [
-          _buildFinanceCard(
+        children: _accounts.map((account) {
+          return _buildFinanceCard(
             icon: Icons.account_balance_wallet_outlined,
             title: 'Vadesiz Hesap',
-            number: 'TR•• •••• •••• •••• 4821',
+            number: account.accountNumber,
             balanceTitle: 'Kullanılabilir bakiye',
-            amount: '7.145.584.568',
-            decimal: ',78 TL',
-          ),
-          _buildFinanceCard(
-            icon: Icons.credit_card_rounded,
-            title: 'Premium Kart',
-            number: '•••• •••• •••• 8926',
-            balanceTitle: 'Kullanılabilir limit',
-            amount: '49.255',
-            decimal: ',46 TL',
-          ),
-          _buildFinanceCard(
-            icon: Icons.currency_exchange_rounded,
-            title: 'Döviz Hesabı',
-            number: 'EUR •••• 2931',
-            balanceTitle: 'Toplam bakiye',
-            amount: '5.850.125',
-            decimal: ',00 EUR',
-          ),
-        ],
+            amount: _formatWhole(account.balance),
+            decimal: _formatDecimal(account.balance),
+          );
+        }).toList(),
       ),
     );
   }
