@@ -10,19 +10,13 @@ class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
-  State<LoginPage> createState() =>
-      _LoginPageState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState
-    extends State<LoginPage> {
-  final TextEditingController
-  _identifierController =
-  TextEditingController();
+class _LoginPageState extends State<LoginPage> {
+  final TextEditingController _identifierController = TextEditingController();
 
-  final TextEditingController
-  _passwordController =
-  TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
   bool _isLoading = false;
@@ -35,24 +29,17 @@ class _LoginPageState
   }
 
   Future<void> _login() async {
-    final identifier =
-    _identifierController.text.trim();
+    final identifier = _identifierController.text.trim();
 
-    final password =
-        _passwordController.text;
+    final password = _passwordController.text;
 
-    if (identifier.length != 8 &&
-        identifier.length != 11) {
-      _showMessage(
-        '8 haneli müşteri no veya 11 haneli T.C. kimlik no gir.',
-      );
+    if (identifier.length != 8 && identifier.length != 11) {
+      _showMessage('8 haneli müşteri no veya 11 haneli T.C. kimlik no gir.');
       return;
     }
 
     if (password.isEmpty) {
-      _showMessage(
-        'Şifreni gir.',
-      );
+      _showMessage('Şifreni gir.');
       return;
     }
 
@@ -61,34 +48,20 @@ class _LoginPageState
     });
 
     try {
-      await ApiService.login(
-        identifier: identifier,
-        password: password,
-      );
+      await ApiService.login(identifier: identifier, password: password);
 
       if (!mounted) return;
 
-      Navigator.of(context)
-          .pushAndRemoveUntil(
+      Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
-          builder: (_) =>
-          const SessionGate(
-            initiallyUnlocked: true,
-          ),
+          builder: (_) => const SessionGate(initiallyUnlocked: true),
         ),
-            (route) => false,
+        (route) => false,
       );
     } catch (e) {
       if (!mounted) return;
 
-      _showMessage(
-        e
-            .toString()
-            .replaceFirst(
-          'Exception: ',
-          '',
-        ),
-      );
+      _showMessage(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) {
         setState(() {
@@ -103,10 +76,8 @@ class _LoginPageState
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          behavior:
-          SnackBarBehavior.floating,
-          backgroundColor:
-          AppColors.textPrimary,
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.textPrimary,
           content: Text(message),
         ),
       );
@@ -114,25 +85,18 @@ class _LoginPageState
 
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion<
-        SystemUiOverlayStyle>(
-      value:
-      SystemUiOverlayStyle.light,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor:
-        AppColors.background,
+        backgroundColor: AppColors.background,
         body: Stack(
           children: [
             Container(
               height: 390,
-              decoration:
-              const BoxDecoration(
-                gradient:
-                LinearGradient(
-                  begin:
-                  Alignment.topLeft,
-                  end: Alignment
-                      .bottomRight,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                   colors: [
                     AppColors.navy,
                     AppColors.navyLight,
@@ -147,469 +111,274 @@ class _LoginPageState
               child: Container(
                 width: 260,
                 height: 260,
-                decoration:
-                BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: Colors.white
-                        .withValues(
-                      alpha: 0.06,
-                    ),
+                    color: Colors.white.withValues(alpha: 0.06),
                     width: 44,
                   ),
                 ),
               ),
             ),
             SafeArea(
-              child:
-              SingleChildScrollView(
-                physics:
-                const ClampingScrollPhysics(),
+              child: SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
                 keyboardDismissBehavior:
-                ScrollViewKeyboardDismissBehavior
-                    .onDrag,
-                padding:
-                const EdgeInsets
-                    .fromLTRB(
-                  20,
-                  18,
-                  20,
-                  30,
-                ),
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 30),
                 child: Column(
                   children: [
                     const Row(
                       children: [
                         _Logo(),
-                        SizedBox(
-                          width: 14,
-                        ),
+                        SizedBox(width: 14),
                         Column(
-                          crossAxisAlignment:
-                          CrossAxisAlignment
-                              .start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               'IBT BANK',
-                              style:
-                              TextStyle(
-                                color:
-                                Colors.white,
+                              style: TextStyle(
+                                color: Colors.white,
                                 fontSize: 22,
-                                fontWeight:
-                                FontWeight
-                                    .w900,
-                                letterSpacing:
-                                1.3,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.3,
                               ),
                             ),
                             Text(
                               'DIGITAL BANKING',
-                              style:
-                              TextStyle(
-                                color: Colors
-                                    .white60,
+                              style: TextStyle(
+                                color: Colors.white60,
                                 fontSize: 9,
-                                fontWeight:
-                                FontWeight
-                                    .w700,
-                                letterSpacing:
-                                1.8,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.8,
                               ),
                             ),
                           ],
                         ),
                       ],
                     ),
-                    const SizedBox(
-                      height: 40,
-                    ),
+                    const SizedBox(height: 40),
                     const Align(
-                      alignment: Alignment
-                          .centerLeft,
+                      alignment: Alignment.centerLeft,
                       child: Text(
                         'Bankacılığın\nseninle.',
-                        style:
-                        TextStyle(
-                          color:
-                          Colors.white,
+                        style: TextStyle(
+                          color: Colors.white,
                           fontSize: 34,
                           height: 1.07,
-                          fontWeight:
-                          FontWeight
-                              .w800,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
-                    const SizedBox(
-                      height: 13,
-                    ),
+                    const SizedBox(height: 13),
                     const Align(
-                      alignment: Alignment
-                          .centerLeft,
+                      alignment: Alignment.centerLeft,
                       child: Text(
                         'Müşteri numaran veya T.C. kimlik numaran ile güvenli giriş yap.',
-                        style:
-                        TextStyle(
-                          color: Colors
-                              .white70,
+                        style: TextStyle(
+                          color: Colors.white70,
                           fontSize: 14,
                           height: 1.4,
                         ),
                       ),
                     ),
-                    const SizedBox(
-                      height: 30,
-                    ),
+                    const SizedBox(height: 30),
                     Container(
-                      width:
-                      double.infinity,
-                      padding:
-                      const EdgeInsets
-                          .all(22),
-                      decoration:
-                      BoxDecoration(
-                        color:
-                        Colors.white,
-                        borderRadius:
-                        BorderRadius
-                            .circular(
-                          27,
-                        ),
-                        border:
-                        Border.all(
-                          color: AppColors
-                              .border,
-                        ),
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(22),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(27),
+                        border: Border.all(color: AppColors.border),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors
-                                .black
-                                .withValues(
-                              alpha: 0.075,
-                            ),
+                            color: Colors.black.withValues(alpha: 0.075),
                             blurRadius: 28,
-                            offset:
-                            const Offset(
-                              0,
-                              12,
-                            ),
+                            offset: const Offset(0, 12),
                           ),
                         ],
                       ),
                       child: Column(
-                        crossAxisAlignment:
-                        CrossAxisAlignment
-                            .start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
                             'Hoş geldin',
-                            style:
-                            TextStyle(
-                              color: AppColors
-                                  .textPrimary,
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
                               fontSize: 24,
-                              fontWeight:
-                              FontWeight
-                                  .w800,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
-                          const SizedBox(
-                            height: 5,
-                          ),
+                          const SizedBox(height: 5),
                           const Text(
                             'IBT Bank hesabına giriş yap.',
-                            style:
-                            TextStyle(
-                              color: AppColors
-                                  .textSecondary,
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
                               fontSize: 13,
                             ),
                           ),
-                          const SizedBox(
-                            height: 25,
-                          ),
+                          const SizedBox(height: 25),
                           const Text(
                             'Müşteri No / T.C. Kimlik No',
-                            style:
-                            TextStyle(
-                              color: AppColors
-                                  .textPrimary,
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
                               fontSize: 12.5,
-                              fontWeight:
-                              FontWeight
-                                  .w700,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                          const SizedBox(
-                            height: 8,
-                          ),
+                          const SizedBox(height: 8),
                           TextField(
-                            controller:
-                            _identifierController,
-                            enabled:
-                            !_isLoading,
-                            keyboardType:
-                            TextInputType
-                                .number,
-                            textInputAction:
-                            TextInputAction
-                                .next,
+                            controller: _identifierController,
+                            enabled: !_isLoading,
+                            keyboardType: TextInputType.number,
+                            textInputAction: TextInputAction.next,
                             inputFormatters: [
-                              FilteringTextInputFormatter
-                                  .digitsOnly,
-                              LengthLimitingTextInputFormatter(
-                                11,
-                              ),
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(11),
                             ],
-                            decoration:
-                            _decoration(
-                              hint:
-                              '8 veya 11 haneli numara',
-                              icon: Icons
-                                  .account_circle_outlined,
+                            decoration: _decoration(
+                              hint: '8 veya 11 haneli numara',
+                              icon: Icons.account_circle_outlined,
                             ),
                           ),
-                          const SizedBox(
-                            height: 17,
-                          ),
+                          const SizedBox(height: 17),
                           const Text(
                             'Şifre',
-                            style:
-                            TextStyle(
-                              color: AppColors
-                                  .textPrimary,
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
                               fontSize: 12.5,
-                              fontWeight:
-                              FontWeight
-                                  .w700,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                          const SizedBox(
-                            height: 8,
-                          ),
+                          const SizedBox(height: 8),
                           TextField(
-                            controller:
-                            _passwordController,
-                            enabled:
-                            !_isLoading,
-                            obscureText:
-                            _obscurePassword,
-                            textInputAction:
-                            TextInputAction
-                                .done,
+                            controller: _passwordController,
+                            enabled: !_isLoading,
+                            obscureText: _obscurePassword,
+                            textInputAction: TextInputAction.done,
                             onSubmitted: (_) {
                               if (!_isLoading) {
                                 _login();
                               }
                             },
-                            decoration:
-                            _decoration(
-                              hint:
-                              'Şifreni gir',
-                              icon: Icons
-                                  .lock_outline_rounded,
-                              suffix:
-                              IconButton(
-                                onPressed:
-                                _isLoading
+                            decoration: _decoration(
+                              hint: 'Şifreni gir',
+                              icon: Icons.lock_outline_rounded,
+                              suffix: IconButton(
+                                onPressed: _isLoading
                                     ? null
                                     : () {
-                                  setState(
-                                        () {
-                                      _obscurePassword =
-                                      !_obscurePassword;
-                                    },
-                                  );
-                                },
+                                        setState(() {
+                                          _obscurePassword = !_obscurePassword;
+                                        });
+                                      },
                                 icon: Icon(
                                   _obscurePassword
-                                      ? Icons
-                                      .visibility_off_outlined
-                                      : Icons
-                                      .visibility_outlined,
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
                                 ),
                               ),
                             ),
                           ),
-                          const SizedBox(
-                            height: 8,
-                          ),
+                          const SizedBox(height: 8),
                           Align(
-                            alignment:
-                            Alignment
-                                .centerRight,
-                            child:
-                            TextButton(
-                              onPressed:
-                                  () {},
-                              child:
-                              const Text(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () {},
+                              child: const Text(
                                 'Şifremi unuttum',
-                                style:
-                                TextStyle(
-                                  color:
-                                  AppColors
-                                      .primary,
-                                  fontWeight:
-                                  FontWeight
-                                      .w700,
+                                style: TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ),
                           ),
-                          const SizedBox(
-                            height: 6,
-                          ),
+                          const SizedBox(height: 6),
                           SizedBox(
-                            width: double
-                                .infinity,
+                            width: double.infinity,
                             height: 55,
-                            child:
-                            ElevatedButton(
-                              onPressed:
-                              _isLoading
-                                  ? null
-                                  : _login,
-                              style:
-                              ElevatedButton
-                                  .styleFrom(
+                            child: ElevatedButton(
+                              onPressed: _isLoading ? null : _login,
+                              style: ElevatedButton.styleFrom(
                                 elevation: 0,
-                                backgroundColor:
-                                AppColors
-                                    .navy,
-                                foregroundColor:
-                                Colors
-                                    .white,
-                                shape:
-                                RoundedRectangleBorder(
-                                  borderRadius:
-                                  BorderRadius
-                                      .circular(
-                                    17,
-                                  ),
+                                backgroundColor: AppColors.navy,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(17),
                                 ),
                               ),
-                              child:
-                              _isLoading
+                              child: _isLoading
                                   ? const SizedBox(
-                                width:
-                                23,
-                                height:
-                                23,
-                                child:
-                                CircularProgressIndicator(
-                                  color:
-                                  Colors.white,
-                                  strokeWidth:
-                                  2.4,
-                                ),
-                              )
+                                      width: 23,
+                                      height: 23,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2.4,
+                                      ),
+                                    )
                                   : const Text(
-                                'Giriş Yap',
-                                style:
-                                TextStyle(
-                                  fontWeight:
-                                  FontWeight.w800,
-                                  fontSize:
-                                  15,
-                                ),
-                              ),
+                                      'Giriş Yap',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 15,
+                                      ),
+                                    ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(
-                      height: 18,
-                    ),
+                    const SizedBox(height: 18),
                     InkWell(
-                      borderRadius:
-                      BorderRadius
-                          .circular(20),
+                      borderRadius: BorderRadius.circular(20),
                       onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) =>
-                            const RegisterPage(),
+                            builder: (_) => const RegisterPage(),
                           ),
                         );
                       },
                       child: Container(
-                        width:
-                        double.infinity,
-                        padding:
-                        const EdgeInsets
-                            .all(17),
-                        decoration:
-                        BoxDecoration(
-                          color:
-                          Colors.white,
-                          borderRadius:
-                          BorderRadius
-                              .circular(
-                            20,
-                          ),
-                          border:
-                          Border.all(
-                            color:
-                            AppColors
-                                .border,
-                          ),
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(17),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppColors.border),
                         ),
-                        child:
-                        const Row(
+                        child: const Row(
                           children: [
                             Icon(
-                              Icons
-                                  .person_add_alt_1_rounded,
-                              color:
-                              AppColors
-                                  .primary,
+                              Icons.person_add_alt_1_rounded,
+                              color: AppColors.primary,
                             ),
-                            SizedBox(
-                              width: 13,
-                            ),
+                            SizedBox(width: 13),
                             Expanded(
-                              child:
-                              Column(
-                                crossAxisAlignment:
-                                CrossAxisAlignment
-                                    .start,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     'Henüz müşterimiz değil misin?',
-                                    style:
-                                    TextStyle(
-                                      color:
-                                      AppColors
-                                          .textPrimary,
-                                      fontWeight:
-                                      FontWeight
-                                          .w700,
+                                    style: TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                   Text(
                                     'Dakikalar içinde hesap oluştur.',
-                                    style:
-                                    TextStyle(
-                                      color:
-                                      AppColors
-                                          .textSecondary,
-                                      fontSize:
-                                      11.5,
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 11.5,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
                             Icon(
-                              Icons
-                                  .arrow_forward_ios_rounded,
-                              color:
-                              AppColors
-                                  .primary,
+                              Icons.arrow_forward_ios_rounded,
+                              color: AppColors.primary,
                               size: 16,
                             ),
                           ],
@@ -637,29 +406,18 @@ InputDecoration _decoration({
     prefixIcon: Icon(icon),
     suffixIcon: suffix,
     filled: true,
-    fillColor:
-    const Color(0xFFF7F9FA),
+    fillColor: const Color(0xFFF7F9FA),
     border: OutlineInputBorder(
-      borderRadius:
-      BorderRadius.circular(15),
+      borderRadius: BorderRadius.circular(15),
       borderSide: BorderSide.none,
     ),
-    enabledBorder:
-    OutlineInputBorder(
-      borderRadius:
-      BorderRadius.circular(15),
-      borderSide: const BorderSide(
-        color: AppColors.border,
-      ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(15),
+      borderSide: const BorderSide(color: AppColors.border),
     ),
-    focusedBorder:
-    OutlineInputBorder(
-      borderRadius:
-      BorderRadius.circular(15),
-      borderSide: const BorderSide(
-        color: AppColors.primary,
-        width: 1.5,
-      ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(15),
+      borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
     ),
   );
 }
@@ -674,22 +432,16 @@ class _Logo extends StatelessWidget {
       height: 56,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.white
-            .withValues(alpha: 0.13),
-        borderRadius:
-        BorderRadius.circular(18),
-        border: Border.all(
-          color: Colors.white
-              .withValues(alpha: 0.35),
-        ),
+        color: Colors.white.withValues(alpha: 0.13),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
       ),
       child: const Text(
         'IBT',
         style: TextStyle(
           color: Colors.white,
           fontSize: 17,
-          fontWeight:
-          FontWeight.w900,
+          fontWeight: FontWeight.w900,
         ),
       ),
     );

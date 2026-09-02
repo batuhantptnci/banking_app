@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:banking_app/services/api_service.dart';
 import 'package:banking_app/models/account_model.dart';
+import 'package:banking_app/models/transaction_model.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -14,17 +15,13 @@ class _HomePageState extends State<HomePage> {
   final ScrollController _scrollController = ScrollController();
   final ScrollController _tabScrollController = ScrollController();
 
-  final List<GlobalKey> _tabKeys = List.generate(
-    5,
-        (_) => GlobalKey(),
-  );
+  final List<GlobalKey> _tabKeys = List.generate(5, (_) => GlobalKey());
 
   static const Color background = Color(0xFFF4F6F8);
   static const Color navy = Color(0xFF102A43);
   static const Color teal = Color(0xFF0E7C86);
   static const Color text = Color(0xFF17212B);
   static const Color muted = Color(0xFF7C8793);
-  static const String bankName = 'IBT Bank';
 
   final List<String> tabs = const [
     'Genel Bakış',
@@ -35,16 +32,31 @@ class _HomePageState extends State<HomePage> {
   ];
 
   int selectedTab = 0;
+
+  // ---------------------------------------------------------------------------
+  // ACCOUNT STATE
+  // ---------------------------------------------------------------------------
+
   List<AccountModel> _accounts = [];
   bool _accountsLoading = true;
   String? _accountsError;
 
+  // ---------------------------------------------------------------------------
+  // TRANSACTION STATE
+  // ---------------------------------------------------------------------------
+
+  List<TransactionModel> _transactions = [];
+  bool _transactionsLoading = true;
+  String? _transactionsError;
+
   double get _totalBalance {
-    return _accounts.fold(
-      0,
-          (total, account) => total + account.balance,
-    );
+    return _accounts.fold(0, (total, account) => total + account.balance);
   }
+
+  // ---------------------------------------------------------------------------
+  // FORMATTERS
+  // ---------------------------------------------------------------------------
+
   String _formatWhole(double value) {
     final whole = value.floor().toString();
     final buffer = StringBuffer();
@@ -70,16 +82,76 @@ class _HomePageState extends State<HomePage> {
   String _formatMoney(double value) {
     return '${_formatWhole(value)}${_formatDecimal(value)}';
   }
+
+  String _transactionTitle(TransactionModel transaction) {
+    switch (transaction.type) {
+      case 'DEPOSIT':
+        return 'Para Yatırma';
+
+      case 'WITHDRAW':
+        return 'Para Çekme';
+
+      case 'TRANSFER':
+        return transaction.isIncoming ? 'Gelen Transfer' : 'Giden Transfer';
+
+      default:
+        return 'Banka İşlemi';
+    }
+  }
+
+  IconData _transactionIcon(TransactionModel transaction) {
+    switch (transaction.type) {
+      case 'DEPOSIT':
+        return Icons.add_circle_outline_rounded;
+
+      case 'WITHDRAW':
+        return Icons.remove_circle_outline_rounded;
+
+      case 'TRANSFER':
+        return Icons.swap_horiz_rounded;
+
+      default:
+        return Icons.receipt_long_outlined;
+    }
+  }
+
+  String _transactionDate(DateTime date) {
+    final now = DateTime.now();
+
+    final sameDay =
+        now.year == date.year && now.month == date.month && now.day == date.day;
+
+    final hour = date.hour.toString().padLeft(2, '0');
+    final minute = date.minute.toString().padLeft(2, '0');
+
+    if (sameDay) {
+      return 'Bugün • $hour:$minute';
+    }
+
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+
+    return '$day.$month.${date.year} • $hour:$minute';
+  }
+
+  // ---------------------------------------------------------------------------
+  // COLORS / TEXT
+  // ---------------------------------------------------------------------------
+
   Color get sectionColor {
     switch (selectedTab) {
       case 1:
         return const Color(0xFF123D5A);
+
       case 2:
         return const Color(0xFF116A70);
+
       case 3:
         return const Color(0xFF2E303B);
+
       case 4:
         return const Color(0xFF4B426B);
+
       default:
         return navy;
     }
@@ -89,21 +161,34 @@ class _HomePageState extends State<HomePage> {
     switch (selectedTab) {
       case 1:
         return 'Hesap veya işlem ara';
+
       case 2:
         return 'Kart veya işlem ara';
+
       case 3:
         return 'Yatırım ürünü veya işlemi ara';
+
       case 4:
         return 'Kredi ürünü veya işlemi ara';
+
       default:
         return 'Ürün, hesap veya işlem ara';
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // INIT
+  // ---------------------------------------------------------------------------
+
   @override
   void initState() {
     super.initState();
     _loadAccounts();
   }
+
+  // ---------------------------------------------------------------------------
+  // API
+  // ---------------------------------------------------------------------------
 
   Future<void> _loadAccounts() async {
     try {
@@ -116,21 +201,96 @@ class _HomePageState extends State<HomePage> {
         _accountsLoading = false;
         _accountsError = null;
       });
+
+      await _loadTransactions(accounts);
     } catch (e) {
       if (!mounted) return;
 
       setState(() {
+        _accounts = [];
         _accountsLoading = false;
         _accountsError = e.toString();
+
+        _transactions = [];
+        _transactionsLoading = false;
+        _transactionsError = e.toString();
       });
     }
   }
+
+  Future<void> _loadTransactions(List<AccountModel> accounts) async {
+    if (accounts.isEmpty) {
+      if (!mounted) return;
+
+      setState(() {
+        _transactions = [];
+        _transactionsLoading = false;
+        _transactionsError = null;
+      });
+
+      return;
+    }
+
+    try {
+      final results = await Future.wait(
+        accounts.map(
+          (account) => ApiService.getAccountTransactions(account.id),
+        ),
+      );
+
+      final uniqueTransactions = <int, TransactionModel>{};
+
+      for (final transactionList in results) {
+        for (final transaction in transactionList) {
+          uniqueTransactions[transaction.id] = transaction;
+        }
+      }
+
+      final transactions = uniqueTransactions.values.toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      if (!mounted) return;
+
+      setState(() {
+        _transactions = transactions;
+        _transactionsLoading = false;
+        _transactionsError = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _transactions = [];
+        _transactionsLoading = false;
+        _transactionsError = e.toString();
+      });
+    }
+  }
+
+  Future<void> _reloadDashboard() async {
+    if (!mounted) return;
+
+    setState(() {
+      _accountsLoading = true;
+      _accountsError = null;
+
+      _transactionsLoading = true;
+      _transactionsError = null;
+    });
+
+    await _loadAccounts();
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
     _tabScrollController.dispose();
     super.dispose();
   }
+
+  // ---------------------------------------------------------------------------
+  // BUILD
+  // ---------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -147,36 +307,41 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             children: [
               _buildHeader(),
-
-              // SABİT SEKME MENÜSÜ
               _buildTabs(),
 
-              // SADECE BURASI SCROLL
               Expanded(
                 child: ColoredBox(
                   color: background,
-                  child: ListView(
-                    controller: _scrollController,
-                    physics: const ClampingScrollPhysics(),
-                    padding: EdgeInsets.zero,
-                    children: [
-                      _buildHero(),
-
-                      Transform.translate(
-                        offset: const Offset(0, -22),
-                        child: Column(
-                          children: [
-                            _buildSearchBar(),
-                            const SizedBox(height: 26),
-                            Padding(
-                              padding:
-                              const EdgeInsets.symmetric(horizontal: 16),
-                              child: _buildSelectedContent(),
-                            ),
-                          ],
-                        ),
+                  child: RefreshIndicator(
+                    onRefresh: _reloadDashboard,
+                    child: ListView(
+                      controller: _scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(
+                        parent: ClampingScrollPhysics(),
                       ),
-                    ],
+                      padding: EdgeInsets.zero,
+                      children: [
+                        _buildHero(),
+
+                        Transform.translate(
+                          offset: const Offset(0, -22),
+                          child: Column(
+                            children: [
+                              _buildSearchBar(),
+
+                              const SizedBox(height: 26),
+
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
+                                child: _buildSelectedContent(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -203,10 +368,10 @@ class _HomePageState extends State<HomePage> {
             width: 52,
             height: 52,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.14),
+              color: Colors.white.withValues(alpha: 0.14),
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withOpacity(0.70),
+                color: Colors.white.withValues(alpha: 0.70),
                 width: 1.4,
               ),
             ),
@@ -216,7 +381,9 @@ class _HomePageState extends State<HomePage> {
               size: 26,
             ),
           ),
+
           const SizedBox(width: 14),
+
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -229,7 +396,9 @@ class _HomePageState extends State<HomePage> {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
+
                 SizedBox(height: 3),
+
                 Text(
                   'IBT Bank',
                   style: TextStyle(
@@ -241,6 +410,7 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
+
           IconButton(
             onPressed: () async {
               try {
@@ -248,19 +418,14 @@ class _HomePageState extends State<HomePage> {
 
                 if (!mounted) return;
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(message),
-                  ),
-                );
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text(message)));
               } catch (e) {
                 if (!mounted) return;
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Bağlantı hatası: $e'),
-                  ),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Bağlantı hatası: $e')));
               }
             },
             icon: const Icon(
@@ -269,11 +434,12 @@ class _HomePageState extends State<HomePage> {
               size: 27,
             ),
           ),
+
           Container(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.16),
+              color: Colors.white.withValues(alpha: 0.16),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -316,12 +482,10 @@ class _HomePageState extends State<HomePage> {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (!mounted) return;
 
-                // Yeni sekmenin sayfasını en üste getir.
                 if (_scrollController.hasClients) {
                   _scrollController.jumpTo(0);
                 }
 
-                // Seçilen üst sekmeyi görünür alana / merkeze getir.
                 final tabContext = _tabKeys[index].currentContext;
 
                 if (tabContext != null) {
@@ -342,7 +506,7 @@ class _HomePageState extends State<HomePage> {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: selected
-                    ? Colors.white.withOpacity(0.18)
+                    ? Colors.white.withValues(alpha: 0.18)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(28),
               ),
@@ -351,8 +515,7 @@ class _HomePageState extends State<HomePage> {
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 16,
-                  fontWeight:
-                  selected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
             ),
@@ -386,31 +549,15 @@ class _HomePageState extends State<HomePage> {
       case 1:
         return _heroContent(
           eyebrow: 'TOPLAM BAKİYE',
-          amount: _accountsLoading
-              ? '—'
-              : _formatWhole(_totalBalance),
-          decimal: _accountsLoading
-              ? ''
-              : _formatDecimal(_totalBalance),
+          amount: _accountsLoading ? '—' : _formatWhole(_totalBalance),
+          decimal: _accountsLoading ? '' : _formatDecimal(_totalBalance),
           selector: 'Vadesiz TL hesaplar',
           selectorIcon: Icons.account_balance_wallet_outlined,
           actions: const [
-            _QuickActionData(
-              Icons.add_circle_outline,
-              'Hesap\nAç / Ekle',
-            ),
-            _QuickActionData(
-              Icons.savings_outlined,
-              'Para\nYatır',
-            ),
-            _QuickActionData(
-              Icons.qr_code_2_rounded,
-              'QR ile\nİşlem',
-            ),
-            _QuickActionData(
-              Icons.more_horiz_rounded,
-              'Diğer\nİşlemler',
-            ),
+            _QuickActionData(Icons.add_circle_outline, 'Hesap\nAç / Ekle'),
+            _QuickActionData(Icons.savings_outlined, 'Para\nYatır'),
+            _QuickActionData(Icons.qr_code_2_rounded, 'QR ile\nİşlem'),
+            _QuickActionData(Icons.more_horiz_rounded, 'Diğer\nİşlemler'),
           ],
         );
 
@@ -422,22 +569,10 @@ class _HomePageState extends State<HomePage> {
           selector: 'Premium Card •••• 8926',
           selectorIcon: Icons.credit_card_rounded,
           actions: const [
-            _QuickActionData(
-              Icons.add_card_rounded,
-              'Karta\nBaşvur',
-            ),
-            _QuickActionData(
-              Icons.trending_up_rounded,
-              'Limit\nArtır',
-            ),
-            _QuickActionData(
-              Icons.payments_outlined,
-              'Ödeme\nYap',
-            ),
-            _QuickActionData(
-              Icons.more_horiz_rounded,
-              'Diğer\nİşlemler',
-            ),
+            _QuickActionData(Icons.add_card_rounded, 'Karta\nBaşvur'),
+            _QuickActionData(Icons.trending_up_rounded, 'Limit\nArtır'),
+            _QuickActionData(Icons.payments_outlined, 'Ödeme\nYap'),
+            _QuickActionData(Icons.more_horiz_rounded, 'Diğer\nİşlemler'),
           ],
         );
 
@@ -453,18 +588,12 @@ class _HomePageState extends State<HomePage> {
               Icons.candlestick_chart_rounded,
               'Hisse\nAl / Sat',
             ),
-            _QuickActionData(
-              Icons.filter_alt_outlined,
-              'Fon\nAl / Sat',
-            ),
+            _QuickActionData(Icons.filter_alt_outlined, 'Fon\nAl / Sat'),
             _QuickActionData(
               Icons.currency_exchange_rounded,
               'Döviz\nAl / Sat',
             ),
-            _QuickActionData(
-              Icons.query_stats_rounded,
-              'Yatırım\nİşlemleri',
-            ),
+            _QuickActionData(Icons.query_stats_rounded, 'Yatırım\nİşlemleri'),
           ],
         );
 
@@ -476,53 +605,25 @@ class _HomePageState extends State<HomePage> {
           selector: 'İhtiyaç Kredisi',
           selectorIcon: Icons.account_balance_outlined,
           actions: const [
-            _QuickActionData(
-              Icons.add_circle_outline,
-              'Krediye\nBaşvur',
-            ),
-            _QuickActionData(
-              Icons.calculate_outlined,
-              'Kredi\nHesapla',
-            ),
-            _QuickActionData(
-              Icons.calendar_month_outlined,
-              'Ödeme\nPlanı',
-            ),
-            _QuickActionData(
-              Icons.more_horiz_rounded,
-              'Diğer\nİşlemler',
-            ),
+            _QuickActionData(Icons.add_circle_outline, 'Krediye\nBaşvur'),
+            _QuickActionData(Icons.calculate_outlined, 'Kredi\nHesapla'),
+            _QuickActionData(Icons.calendar_month_outlined, 'Ödeme\nPlanı'),
+            _QuickActionData(Icons.more_horiz_rounded, 'Diğer\nİşlemler'),
           ],
         );
 
       default:
         return _heroContent(
           eyebrow: 'TOPLAM VARLIĞIM',
-          amount: _accountsLoading
-              ? '—'
-              : _formatWhole(_totalBalance),
-          decimal: _accountsLoading
-              ? ''
-              : _formatDecimal(_totalBalance),
+          amount: _accountsLoading ? '—' : _formatWhole(_totalBalance),
+          decimal: _accountsLoading ? '' : _formatDecimal(_totalBalance),
           selector: 'Tüm varlıklarım',
           selectorIcon: Icons.account_balance_rounded,
           actions: const [
-            _QuickActionData(
-              Icons.swap_horiz_rounded,
-              'Para\nTransferi',
-            ),
-            _QuickActionData(
-              Icons.qr_code_2_rounded,
-              'QR ile\nİşlem',
-            ),
-            _QuickActionData(
-              Icons.receipt_long_outlined,
-              'Ödeme\nYap',
-            ),
-            _QuickActionData(
-              Icons.grid_view_rounded,
-              'Tüm\nİşlemler',
-            ),
+            _QuickActionData(Icons.swap_horiz_rounded, 'Para\nTransferi'),
+            _QuickActionData(Icons.qr_code_2_rounded, 'QR ile\nİşlem'),
+            _QuickActionData(Icons.receipt_long_outlined, 'Ödeme\nYap'),
+            _QuickActionData(Icons.grid_view_rounded, 'Tüm\nİşlemler'),
           ],
         );
     }
@@ -541,12 +642,13 @@ class _HomePageState extends State<HomePage> {
         Text(
           eyebrow,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.78),
+            color: Colors.white.withValues(alpha: 0.78),
             fontSize: 13,
             fontWeight: FontWeight.w600,
             letterSpacing: 1.15,
           ),
         ),
+
         const SizedBox(height: 10),
 
         Row(
@@ -567,11 +669,13 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
+
             const SizedBox(width: 2),
+
             Text(
               decimal,
               style: TextStyle(
-                color: Colors.white.withOpacity(0.62),
+                color: Colors.white.withValues(alpha: 0.62),
                 fontSize: 24,
                 height: 1.05,
                 fontWeight: FontWeight.w600,
@@ -583,23 +687,18 @@ class _HomePageState extends State<HomePage> {
         const SizedBox(height: 22),
 
         Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 10,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.12),
+            color: Colors.white.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(28),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                selectorIcon,
-                color: Colors.white,
-                size: 20,
-              ),
+              Icon(selectorIcon, color: Colors.white, size: 20),
+
               const SizedBox(width: 9),
+
               Flexible(
                 child: Text(
                   selector,
@@ -611,7 +710,9 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
+
               const SizedBox(width: 8),
+
               const Icon(
                 Icons.keyboard_arrow_down_rounded,
                 color: Colors.white,
@@ -628,37 +729,35 @@ class _HomePageState extends State<HomePage> {
           children: actions
               .map(
                 (item) => SizedBox(
-              width: 76,
-              child: Column(
-                children: [
-                  Container(
-                    width: 62,
-                    height: 62,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.13),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      item.icon,
-                      color: Colors.white,
-                      size: 28,
-                    ),
+                  width: 76,
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 62,
+                        height: 62,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.13),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(item.icon, color: Colors.white, size: 28),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      Text(
+                        item.label,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12.5,
+                          height: 1.25,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    item.label,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12.5,
-                      height: 1.25,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          )
+                ),
+              )
               .toList(),
         ),
       ],
@@ -680,7 +779,7 @@ class _HomePageState extends State<HomePage> {
           borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.10),
+              color: Colors.black.withValues(alpha: 0.10),
               blurRadius: 18,
               offset: const Offset(0, 8),
             ),
@@ -693,7 +792,9 @@ class _HomePageState extends State<HomePage> {
               size: 28,
               color: Color(0xFF5B6470),
             ),
+
             const SizedBox(width: 12),
+
             Expanded(
               child: Text(
                 searchHint,
@@ -742,8 +843,7 @@ class _HomePageState extends State<HomePage> {
 
         _buildNoticeBanner(
           icon: Icons.auto_graph_rounded,
-          text:
-          'Harcamalarını analiz et, aylık bütçeni daha kolay yönet.',
+          text: 'Harcamalarını analiz et, aylık bütçeni daha kolay yönet.',
         ),
 
         const SizedBox(height: 20),
@@ -771,6 +871,10 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // ACCOUNTS
+  // ---------------------------------------------------------------------------
+
   Widget _buildAccountsSection() {
     if (_accountsLoading) {
       return const Center(
@@ -788,17 +892,13 @@ class _HomePageState extends State<HomePage> {
           children: [
             const Text(
               'Hesap bilgileri alınamadı.',
+              style: TextStyle(color: muted),
             ),
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _accountsLoading = true;
-                  _accountsError = null;
-                });
 
-                _loadAccounts();
-              },
+            const SizedBox(height: 12),
+
+            TextButton(
+              onPressed: _reloadDashboard,
               child: const Text('Tekrar Dene'),
             ),
           ],
@@ -812,6 +912,7 @@ class _HomePageState extends State<HomePage> {
         trailing: '0 hesap',
         child: const Text(
           'Henüz hesabın bulunmuyor.',
+          style: TextStyle(color: muted),
         ),
       );
     }
@@ -827,27 +928,29 @@ class _HomePageState extends State<HomePage> {
                 _accountRow(
                   icon: Icons.account_balance_wallet_outlined,
                   title: 'Kullanılabilir bakiye',
-                  amount: _formatMoney(
-                    _accounts[i].balance,
-                  ),
-                  subtitle:
-                  'Vadesiz TL • ${_accounts[i].accountNumber}',
+                  amount: _formatMoney(_accounts[i].balance),
+                  subtitle: 'Vadesiz TL • ${_accounts[i].accountNumber}',
                 ),
-                if (i != _accounts.length - 1)
-                  const Divider(height: 28),
+
+                if (i != _accounts.length - 1) const Divider(height: 28),
               ],
             ],
           ),
         ),
+
         const SizedBox(height: 20),
+
         _buildNoticeBanner(
           icon: Icons.savings_outlined,
-          text:
-          'Birikimlerini otomatik talimatla düzenli hale getir.',
+          text: 'Birikimlerini otomatik talimatla düzenli hale getir.',
         ),
       ],
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // CARDS
+  // ---------------------------------------------------------------------------
 
   Widget _buildCardsSection() {
     return Column(
@@ -861,20 +964,15 @@ class _HomePageState extends State<HomePage> {
           trailing: '1 kart',
           child: Column(
             children: [
-              _detailRow(
-                'Kullanılabilir limit',
-                '49.255,46 TL',
-              ),
+              _detailRow('Kullanılabilir limit', '49.255,46 TL'),
+
               const SizedBox(height: 13),
-              _detailRow(
-                'Dönem içi harcama',
-                '744,54 TL',
-              ),
+
+              _detailRow('Dönem içi harcama', '744,54 TL'),
+
               const SizedBox(height: 13),
-              _detailRow(
-                'Son ödeme tarihi',
-                '06.09.2026',
-              ),
+
+              _detailRow('Son ödeme tarihi', '06.09.2026'),
             ],
           ),
         ),
@@ -889,6 +987,10 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // INVESTMENTS
+  // ---------------------------------------------------------------------------
+
   Widget _buildInvestmentsSection() {
     return Column(
       children: [
@@ -902,11 +1004,9 @@ class _HomePageState extends State<HomePage> {
                   label: 'Listelerim',
                 ),
               ),
-              Container(
-                width: 1,
-                height: 58,
-                color: const Color(0xFFE7E9ED),
-              ),
+
+              Container(width: 1, height: 58, color: const Color(0xFFE7E9ED)),
+
               Expanded(
                 child: _smallShortcut(
                   icon: Icons.show_chart_rounded,
@@ -942,7 +1042,9 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
+
               const SizedBox(width: 14),
+
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -958,14 +1060,12 @@ class _HomePageState extends State<HomePage> {
                     SizedBox(height: 4),
                     Text(
                       '3,00 EUR',
-                      style: TextStyle(
-                        color: muted,
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(color: muted, fontSize: 14),
                     ),
                   ],
                 ),
               ),
+
               const Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -980,10 +1080,7 @@ class _HomePageState extends State<HomePage> {
                   SizedBox(height: 4),
                   Text(
                     '-2,91 TL • % -1,73',
-                    style: TextStyle(
-                      color: Color(0xFFC35555),
-                      fontSize: 12.5,
-                    ),
+                    style: TextStyle(color: Color(0xFFC35555), fontSize: 12.5),
                   ),
                 ],
               ),
@@ -994,6 +1091,10 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // LOANS
+  // ---------------------------------------------------------------------------
+
   Widget _buildLoansSection() {
     return Column(
       children: [
@@ -1002,58 +1103,50 @@ class _HomePageState extends State<HomePage> {
           trailing: '1 kredi',
           child: Column(
             children: [
-              _detailRow(
-                'Kalan borç',
-                '24.850,00 TL',
-              ),
+              _detailRow('Kalan borç', '24.850,00 TL'),
+
               const SizedBox(height: 13),
-              _detailRow(
-                'Aylık taksit',
-                '2.485,00 TL',
-              ),
+
+              _detailRow('Aylık taksit', '2.485,00 TL'),
+
               const SizedBox(height: 13),
-              _detailRow(
-                'Kalan taksit',
-                '10',
-              ),
+
+              _detailRow('Kalan taksit', '10'),
+
               const SizedBox(height: 13),
-              _detailRow(
-                'Sonraki ödeme',
-                '04.09.2026',
-              ),
+
+              _detailRow('Sonraki ödeme', '04.09.2026'),
             ],
           ),
         ),
+
         const SizedBox(height: 20),
+
         _buildOfferCard(),
       ],
     );
   }
 
   // ---------------------------------------------------------------------------
-  // CAROUSEL
+  // ACCOUNT CAROUSEL
   // ---------------------------------------------------------------------------
 
   Widget _buildAccountsCarousel() {
     if (_accountsLoading) {
       return const SizedBox(
         height: 184,
-        child: Center(
-          child: CircularProgressIndicator(),
-        ),
+        child: Center(child: CircularProgressIndicator()),
       );
     }
 
-    if (_accounts.isEmpty) {
+    if (_accountsError != null || _accounts.isEmpty) {
       return const SizedBox.shrink();
     }
 
     return SizedBox(
       height: 184,
       child: PageView(
-        controller: PageController(
-          viewportFraction: 0.92,
-        ),
+        controller: PageController(viewportFraction: 0.92),
         padEnds: false,
         children: _accounts.map((account) {
           return _buildFinanceCard(
@@ -1087,7 +1180,9 @@ class _HomePageState extends State<HomePage> {
           Row(
             children: [
               _roundIcon(icon),
+
               const SizedBox(width: 11),
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1100,21 +1195,18 @@ class _HomePageState extends State<HomePage> {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
+
                     const SizedBox(height: 3),
+
                     Text(
                       number,
-                      style: const TextStyle(
-                        color: muted,
-                        fontSize: 12.5,
-                      ),
+                      style: const TextStyle(color: muted, fontSize: 12.5),
                     ),
                   ],
                 ),
               ),
-              const Icon(
-                Icons.more_horiz_rounded,
-                color: muted,
-              ),
+
+              const Icon(Icons.more_horiz_rounded, color: muted),
             ],
           ),
 
@@ -1126,10 +1218,7 @@ class _HomePageState extends State<HomePage> {
 
           Text(
             balanceTitle,
-            style: const TextStyle(
-              color: muted,
-              fontSize: 13,
-            ),
+            style: const TextStyle(color: muted, fontSize: 13),
           ),
 
           const SizedBox(height: 5),
@@ -1151,6 +1240,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
+
               Text(
                 decimal,
                 style: const TextStyle(
@@ -1168,94 +1258,154 @@ class _HomePageState extends State<HomePage> {
   }
 
   // ---------------------------------------------------------------------------
-  // RECENT TRANSACTIONS
+  // REAL RECENT TRANSACTIONS
   // ---------------------------------------------------------------------------
 
   Widget _buildRecentTransactionsCard() {
+    if (_transactionsLoading) {
+      return _sectionCard(
+        title: 'Son işlemler',
+        child: const Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
+
+    if (_transactionsError != null) {
+      return _sectionCard(
+        title: 'Son işlemler',
+        child: Column(
+          children: [
+            const Text(
+              'İşlemler yüklenemedi.',
+              style: TextStyle(color: muted, fontSize: 14),
+            ),
+
+            const SizedBox(height: 10),
+
+            TextButton(
+              onPressed: () async {
+                if (!mounted) return;
+
+                setState(() {
+                  _transactionsLoading = true;
+                  _transactionsError = null;
+                });
+
+                await _loadTransactions(_accounts);
+              },
+              child: const Text('Tekrar Dene'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_transactions.isEmpty) {
+      return _sectionCard(
+        title: 'Son işlemler',
+        child: const Text(
+          'Henüz bir işlemin bulunmuyor.',
+          style: TextStyle(color: muted, fontSize: 14),
+        ),
+      );
+    }
+
+    final recentTransactions = _transactions.take(5).toList();
+
     return _sectionCard(
       title: 'Son işlemler',
       trailingWidget: Container(
         width: 28,
         height: 28,
         alignment: Alignment.center,
-        decoration: const BoxDecoration(
-          color: navy,
-          shape: BoxShape.circle,
-        ),
-        child: const Text(
-          '1',
-          style: TextStyle(
+        decoration: const BoxDecoration(color: navy, shape: BoxShape.circle),
+        child: Text(
+          '${_transactions.length}',
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 13,
             fontWeight: FontWeight.w700,
           ),
         ),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
         children: [
-          _roundIcon(
-            Icons.shopping_bag_outlined,
-          ),
+          for (int i = 0; i < recentTransactions.length; i++) ...[
+            _transactionRow(recentTransactions[i]),
 
-          const SizedBox(width: 13),
+            if (i != recentTransactions.length - 1) const Divider(height: 28),
+          ],
+        ],
+      ),
+    );
+  }
 
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Market',
-                  style: TextStyle(
-                    color: text,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Migros',
-                  style: TextStyle(
-                    color: muted,
-                    fontSize: 13.5,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Bugün • 11:42',
-                  style: TextStyle(
-                    color: Color(0xFFA6AEB7),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
+  Widget _transactionRow(TransactionModel transaction) {
+    final incoming = transaction.isIncoming;
 
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+    final sign = incoming ? '+' : '-';
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _roundIcon(_transactionIcon(transaction)),
+
+        const SizedBox(width: 13),
+
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '-424,95 TL',
-                style: TextStyle(
+                _transactionTitle(transaction),
+                style: const TextStyle(
                   color: text,
                   fontSize: 16,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              SizedBox(height: 5),
+
+              const SizedBox(height: 4),
+
               Text(
-                'Tamamlandı',
-                style: TextStyle(
-                  color: Color(0xFF3A8D6D),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
+                _transactionDate(transaction.createdAt),
+                style: const TextStyle(color: muted, fontSize: 12.5),
               ),
             ],
           ),
-        ],
-      ),
+        ),
+
+        const SizedBox(width: 10),
+
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              '$sign${_formatMoney(transaction.amount)}',
+              style: TextStyle(
+                color: incoming ? const Color(0xFF3A8D6D) : text,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+
+            const SizedBox(height: 5),
+
+            const Text(
+              'Tamamlandı',
+              style: TextStyle(
+                color: Color(0xFF3A8D6D),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -1306,9 +1456,7 @@ class _HomePageState extends State<HomePage> {
 
           Row(
             children: [
-              _roundIcon(
-                Icons.currency_exchange_rounded,
-              ),
+              _roundIcon(Icons.currency_exchange_rounded),
 
               const SizedBox(width: 13),
 
@@ -1334,13 +1482,12 @@ class _HomePageState extends State<HomePage> {
                       fontWeight: FontWeight.w800,
                     ),
                   ),
+
                   SizedBox(height: 3),
+
                   Text(
                     '-2,91 TL',
-                    style: TextStyle(
-                      color: Color(0xFFC35555),
-                      fontSize: 12.5,
-                    ),
+                    style: TextStyle(color: Color(0xFFC35555), fontSize: 12.5),
                   ),
                 ],
               ),
@@ -1366,14 +1513,15 @@ class _HomePageState extends State<HomePage> {
               title: 'Aracım',
             ),
           ),
+
           const SizedBox(width: 10),
+
           Expanded(
-            child: _miniService(
-              icon: Icons.home_work_outlined,
-              title: 'Evim',
-            ),
+            child: _miniService(icon: Icons.home_work_outlined, title: 'Evim'),
           ),
+
           const SizedBox(width: 10),
+
           Expanded(
             child: _miniService(
               icon: Icons.flight_takeoff_rounded,
@@ -1385,10 +1533,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _miniService({
-    required IconData icon,
-    required String title,
-  }) {
+  Widget _miniService({required IconData icon, required String title}) {
     return Column(
       children: [
         Container(
@@ -1397,15 +1542,11 @@ class _HomePageState extends State<HomePage> {
             color: const Color(0xFFF2F5F7),
             borderRadius: BorderRadius.circular(16),
           ),
-          child: Center(
-            child: Icon(
-              icon,
-              color: navy,
-              size: 29,
-            ),
-          ),
+          child: Center(child: Icon(icon, color: navy, size: 29)),
         ),
+
         const SizedBox(height: 8),
+
         Text(
           title,
           style: const TextStyle(
@@ -1428,9 +1569,7 @@ class _HomePageState extends State<HomePage> {
       decoration: BoxDecoration(
         color: const Color(0xFFF7F8FA),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: const Color(0xFFE2E6EA),
-        ),
+        border: Border.all(color: const Color(0xFFE2E6EA)),
       ),
       child: Column(
         children: [
@@ -1447,26 +1586,14 @@ class _HomePageState extends State<HomePage> {
 
           OutlinedButton.icon(
             onPressed: () {},
-            icon: const Icon(
-              Icons.shield_outlined,
-              color: navy,
-            ),
+            icon: const Icon(Icons.shield_outlined, color: navy),
             label: const Text(
               'Güvenlik Merkezi',
-              style: TextStyle(
-                color: navy,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(color: navy, fontWeight: FontWeight.w700),
             ),
             style: OutlinedButton.styleFrom(
-              side: const BorderSide(
-                color: navy,
-                width: 1.3,
-              ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 12,
-              ),
+              side: const BorderSide(color: navy, width: 1.3),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(28),
               ),
@@ -1487,7 +1614,9 @@ class _HomePageState extends State<HomePage> {
                   'Beni arayan\nbanka mı?',
                 ),
               ),
+
               const SizedBox(width: 12),
+
               Expanded(
                 child: _securityAction(
                   Icons.warning_amber_rounded,
@@ -1501,21 +1630,15 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _securityAction(
-      IconData icon,
-      String label,
-      ) {
+  Widget _securityAction(IconData icon, String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 13,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(17),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.045),
+            color: Colors.black.withValues(alpha: 0.045),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -1523,12 +1646,10 @@ class _HomePageState extends State<HomePage> {
       ),
       child: Row(
         children: [
-          Icon(
-            icon,
-            color: teal,
-            size: 22,
-          ),
+          Icon(icon, color: teal, size: 22),
+
           const SizedBox(width: 9),
+
           Flexible(
             child: Text(
               label,
@@ -1551,39 +1672,22 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildLoginHistory() {
     return const Padding(
-      padding: EdgeInsets.fromLTRB(
-        4,
-        4,
-        4,
-        0,
-      ),
+      padding: EdgeInsets.fromLTRB(4, 4, 4, 0),
       child: Column(
         children: [
-          _InfoRow(
-            title: 'SON BAŞARILI GİRİŞ',
-            value: 'Bugün 12:56',
-          ),
+          _InfoRow(title: 'SON BAŞARILI GİRİŞ', value: 'Bugün 12:56'),
 
           SizedBox(height: 12),
 
-          _InfoRow(
-            title: 'GİRİŞ YAPILAN KANAL',
-            value: 'Mobil Uygulama',
-          ),
+          _InfoRow(title: 'GİRİŞ YAPILAN KANAL', value: 'Mobil Uygulama'),
 
           SizedBox(height: 12),
 
-          _InfoRow(
-            title: 'SON BAŞARISIZ GİRİŞ',
-            value: '24.08.2026 18:16',
-          ),
+          _InfoRow(title: 'SON BAŞARISIZ GİRİŞ', value: '24.08.2026 18:16'),
 
           SizedBox(height: 12),
 
-          _InfoRow(
-            title: 'BAŞARISIZ GİRİŞ KANALI',
-            value: 'Web',
-          ),
+          _InfoRow(title: 'BAŞARISIZ GİRİŞ KANALI', value: 'Web'),
         ],
       ),
     );
@@ -1602,15 +1706,11 @@ class _HomePageState extends State<HomePage> {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF071B2D),
-              Color(0xFF123B52),
-              Color(0xFF0D7377),
-            ],
+            colors: [Color(0xFF071B2D), Color(0xFF123B52), Color(0xFF0D7377)],
           ),
           boxShadow: [
             BoxShadow(
-              color: navy.withOpacity(0.25),
+              color: navy.withValues(alpha: 0.25),
               blurRadius: 22,
               offset: const Offset(0, 12),
             ),
@@ -1629,7 +1729,7 @@ class _HomePageState extends State<HomePage> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.08),
+                      color: Colors.white.withValues(alpha: 0.08),
                       width: 34,
                     ),
                   ),
@@ -1644,7 +1744,7 @@ class _HomePageState extends State<HomePage> {
                   height: 220,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.035),
+                    color: Colors.white.withValues(alpha: 0.035),
                   ),
                 ),
               ),
@@ -1672,7 +1772,9 @@ class _HomePageState extends State<HomePage> {
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
+
                             SizedBox(height: 2),
+
                             Text(
                               'PREMIUM',
                               style: TextStyle(
@@ -1729,7 +1831,9 @@ class _HomePageState extends State<HomePage> {
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
+
                               SizedBox(height: 4),
+
                               Text(
                                 'İBRAHİM BATUHAN TOPTANCI',
                                 style: TextStyle(
@@ -1753,7 +1857,9 @@ class _HomePageState extends State<HomePage> {
                                 fontSize: 8.5,
                               ),
                             ),
+
                             SizedBox(height: 3),
+
                             Text(
                               '08/31',
                               style: TextStyle(
@@ -1809,22 +1915,18 @@ class _HomePageState extends State<HomePage> {
                 Text(
                   trailing,
                   style: TextStyle(
-                    color:
-                    trailing == 'Portföyüm' ? teal : muted,
+                    color: trailing == 'Portföyüm' ? teal : muted,
                     fontSize: 13.5,
-                    fontWeight:
-                    trailing == 'Portföyüm'
+                    fontWeight: trailing == 'Portföyüm'
                         ? FontWeight.w700
                         : FontWeight.w600,
-                    decoration:
-                    trailing == 'Portföyüm'
+                    decoration: trailing == 'Portföyüm'
                         ? TextDecoration.underline
                         : TextDecoration.none,
                   ),
                 ),
 
-              if (trailingWidget != null)
-                trailingWidget,
+              ?trailingWidget,
             ],
           ),
 
@@ -1844,12 +1946,10 @@ class _HomePageState extends State<HomePage> {
     return BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(22),
-      border: Border.all(
-        color: const Color(0xFFE8EBEF),
-      ),
+      border: Border.all(color: const Color(0xFFE8EBEF)),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.045),
+          color: Colors.black.withValues(alpha: 0.045),
           blurRadius: 14,
           offset: const Offset(0, 5),
         ),
@@ -1857,9 +1957,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _roundIcon(
-      IconData icon,
-      ) {
+  Widget _roundIcon(IconData icon) {
     return Container(
       width: 46,
       height: 46,
@@ -1867,11 +1965,7 @@ class _HomePageState extends State<HomePage> {
         color: Color(0xFFEAF3F5),
         shape: BoxShape.circle,
       ),
-      child: Icon(
-        icon,
-        color: teal,
-        size: 23,
-      ),
+      child: Icon(icon, color: teal, size: 23),
     );
   }
 
@@ -1892,14 +1986,10 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: muted,
-                  fontSize: 13,
-                ),
-              ),
+              Text(title, style: const TextStyle(color: muted, fontSize: 13)),
+
               const SizedBox(height: 3),
+
               Text(
                 amount,
                 style: const TextStyle(
@@ -1908,41 +1998,32 @@ class _HomePageState extends State<HomePage> {
                   fontWeight: FontWeight.w800,
                 ),
               ),
+
               const SizedBox(height: 4),
+
               Text(
                 subtitle,
-                style: const TextStyle(
-                  color: muted,
-                  fontSize: 12.5,
-                ),
+                style: const TextStyle(color: muted, fontSize: 12.5),
               ),
             ],
           ),
         ),
 
-        const Icon(
-          Icons.more_horiz_rounded,
-          color: muted,
-        ),
+        const Icon(Icons.more_horiz_rounded, color: muted),
       ],
     );
   }
 
-  Widget _detailRow(
-      String title,
-      String value,
-      ) {
+  Widget _detailRow(String title, String value) {
     return Row(
       children: [
         Expanded(
           child: Text(
             title,
-            style: const TextStyle(
-              color: muted,
-              fontSize: 13.5,
-            ),
+            style: const TextStyle(color: muted, fontSize: 13.5),
           ),
         ),
+
         Text(
           value,
           style: const TextStyle(
@@ -1955,14 +2036,9 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _smallShortcut({
-    required IconData icon,
-    required String label,
-  }) {
+  Widget _smallShortcut({required IconData icon, required String label}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        vertical: 4,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -1985,18 +2061,10 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildNoticeBanner({
-    required IconData icon,
-    required String text,
-  }) {
+  Widget _buildNoticeBanner({required IconData icon, required String text}) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(
-        14,
-        13,
-        12,
-        13,
-      ),
+      padding: const EdgeInsets.fromLTRB(14, 13, 12, 13),
       decoration: BoxDecoration(
         color: const Color(0xFFDDEFEA),
         borderRadius: BorderRadius.circular(18),
@@ -2008,16 +2076,9 @@ class _HomePageState extends State<HomePage> {
             height: 42,
             decoration: const BoxDecoration(
               color: Colors.white,
-              borderRadius:
-              BorderRadius.all(
-                Radius.circular(13),
-              ),
+              borderRadius: BorderRadius.all(Radius.circular(13)),
             ),
-            child: Icon(
-              icon,
-              color: teal,
-              size: 22,
-            ),
+            child: Icon(icon, color: teal, size: 22),
           ),
 
           const SizedBox(width: 12),
@@ -2034,11 +2095,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
 
-          const Icon(
-            Icons.close_rounded,
-            color: Color(0xFF3F7E75),
-            size: 22,
-          ),
+          const Icon(Icons.close_rounded, color: Color(0xFF3F7E75), size: 22),
         ],
       ),
     );
@@ -2051,21 +2108,13 @@ class _HomePageState extends State<HomePage> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFF102A43),
-            Color(0xFF174B5C),
-          ],
+          colors: [Color(0xFF102A43), Color(0xFF174B5C)],
         ),
       ),
       child: const Column(
-        crossAxisAlignment:
-        CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.auto_awesome_rounded,
-            color: Colors.white,
-            size: 28,
-          ),
+          Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 28),
 
           SizedBox(height: 16),
 
@@ -2109,30 +2158,20 @@ class _HomePageState extends State<HomePage> {
       elevation: 10,
       items: const [
         BottomNavigationBarItem(
-          icon: Icon(
-            Icons.home_outlined,
-          ),
-          activeIcon: Icon(
-            Icons.home_rounded,
-          ),
+          icon: Icon(Icons.home_outlined),
+          activeIcon: Icon(Icons.home_rounded),
           label: 'Ana Sayfa',
         ),
         BottomNavigationBarItem(
-          icon: Icon(
-            Icons.swap_horiz_rounded,
-          ),
+          icon: Icon(Icons.swap_horiz_rounded),
           label: 'Transfer ve Ödeme',
         ),
         BottomNavigationBarItem(
-          icon: Icon(
-            Icons.add_circle_outline_rounded,
-          ),
+          icon: Icon(Icons.add_circle_outline_rounded),
           label: 'İşlemler',
         ),
         BottomNavigationBarItem(
-          icon: Icon(
-            Icons.favorite_border_rounded,
-          ),
+          icon: Icon(Icons.favorite_border_rounded),
           label: 'Senin İçin',
         ),
       ],
@@ -2141,17 +2180,14 @@ class _HomePageState extends State<HomePage> {
 }
 
 // -----------------------------------------------------------------------------
-// MODELS / SMALL WIDGETS
+// SMALL MODELS / WIDGETS
 // -----------------------------------------------------------------------------
 
 class _QuickActionData {
   final IconData icon;
   final String label;
 
-  const _QuickActionData(
-      this.icon,
-      this.label,
-      );
+  const _QuickActionData(this.icon, this.label);
 }
 
 class _CardLogo extends StatelessWidget {
@@ -2164,10 +2200,10 @@ class _CardLogo extends StatelessWidget {
       height: 42,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.14),
+        color: Colors.white.withValues(alpha: 0.14),
         shape: BoxShape.circle,
         border: Border.all(
-          color: Colors.white.withOpacity(0.55),
+          color: Colors.white.withValues(alpha: 0.55),
           width: 1.2,
         ),
       ),
@@ -2193,15 +2229,9 @@ class _CardChip extends StatelessWidget {
       width: 48,
       height: 34,
       decoration: BoxDecoration(
-        borderRadius:
-        BorderRadius.circular(8),
-        gradient:
-        const LinearGradient(
-          colors: [
-            Color(0xFFD9C07B),
-            Color(0xFFF3E1A9),
-            Color(0xFFC8A85A),
-          ],
+        borderRadius: BorderRadius.circular(8),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFD9C07B), Color(0xFFF3E1A9), Color(0xFFC8A85A)],
         ),
       ),
       child: const Icon(
@@ -2217,16 +2247,12 @@ class _InfoRow extends StatelessWidget {
   final String title;
   final String value;
 
-  const _InfoRow({
-    required this.title,
-    required this.value,
-  });
+  const _InfoRow({required this.title, required this.value});
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment:
-      CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
           child: Text(
@@ -2239,7 +2265,9 @@ class _InfoRow extends StatelessWidget {
             ),
           ),
         ),
+
         const SizedBox(width: 14),
+
         Text(
           value,
           textAlign: TextAlign.right,

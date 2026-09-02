@@ -9,19 +9,14 @@ import 'login_page.dart';
 class SessionGate extends StatefulWidget {
   final bool initiallyUnlocked;
 
-  const SessionGate({
-    super.key,
-    this.initiallyUnlocked = false,
-  });
+  const SessionGate({super.key, this.initiallyUnlocked = false});
 
   @override
   State<SessionGate> createState() => _SessionGateState();
 }
 
-class _SessionGateState extends State<SessionGate>
-    with WidgetsBindingObserver {
-  final LocalAuthentication _localAuth =
-  LocalAuthentication();
+class _SessionGateState extends State<SessionGate> with WidgetsBindingObserver {
+  final LocalAuthentication _localAuth = LocalAuthentication();
 
   bool _loading = true;
   bool _hasSession = false;
@@ -54,9 +49,7 @@ class _SessionGateState extends State<SessionGate>
   // ---------------------------------------------------------------------------
 
   @override
-  void didChangeAppLifecycleState(
-      AppLifecycleState state,
-      ) {
+  void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!_hasSession) return;
 
     if (state == AppLifecycleState.inactive ||
@@ -89,8 +82,7 @@ class _SessionGateState extends State<SessionGate>
 
   Future<void> _checkSession() async {
     try {
-      final bool loggedIn =
-      await ApiService.isLoggedIn();
+      final bool loggedIn = await ApiService.isLoggedIn();
 
       if (!mounted) return;
 
@@ -129,24 +121,20 @@ class _SessionGateState extends State<SessionGate>
     });
 
     try {
-      final bool supported =
-      await _localAuth.isDeviceSupported();
+      final bool supported = await _localAuth.isDeviceSupported();
 
       if (!supported) {
         if (!mounted) return;
 
         setState(() {
-          _errorMessage =
-          'Bu cihazda ekran kilidi veya biyometrik doğrulama kullanılamıyor.';
+          _errorMessage = 'Bu cihazda ekran kilidi veya biyometrik doğrulama kullanılamıyor.';
         });
 
         return;
       }
 
-      final bool authenticated =
-      await _localAuth.authenticate(
-        localizedReason:
-        'IBT Bank hesabına erişmek için kimliğini doğrula',
+      final bool authenticated = await _localAuth.authenticate(
+        localizedReason: 'IBT Bank hesabına erişmek için kimliğini doğrula',
         biometricOnly: false,
         persistAcrossBackgrounding: true,
       );
@@ -163,8 +151,7 @@ class _SessionGateState extends State<SessionGate>
       if (!mounted) return;
 
       setState(() {
-        _errorMessage =
-        'Kimlik doğrulama tamamlanamadı.';
+        _errorMessage = 'Kimlik doğrulama tamamlanamadı.';
       });
     } finally {
       if (mounted) {
@@ -258,9 +245,7 @@ class _LockPage extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: Colors.white.withValues(
-                    alpha: 0.05,
-                  ),
+                  color: Colors.white.withValues(alpha: 0.05),
                   width: 48,
                 ),
               ),
@@ -275,9 +260,7 @@ class _LockPage extends StatelessWidget {
               height: 300,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(
-                  alpha: 0.025,
-                ),
+                color: Colors.white.withValues(alpha: 0.025),
               ),
             ),
           ),
@@ -285,15 +268,9 @@ class _LockPage extends StatelessWidget {
           // -------------------------------------------------------------------
           // CONTENT
           // -------------------------------------------------------------------
-
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                24,
-                24,
-                24,
-                28,
-              ),
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
               child: Column(
                 children: [
                   // BANK BRAND
@@ -304,8 +281,7 @@ class _LockPage extends StatelessWidget {
                       SizedBox(width: 12),
 
                       Column(
-                        crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'IBT BANK',
@@ -338,14 +314,10 @@ class _LockPage extends StatelessWidget {
                     width: 104,
                     height: 104,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(
-                        alpha: 0.10,
-                      ),
+                      color: Colors.white.withValues(alpha: 0.10),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: Colors.white.withValues(
-                          alpha: 0.15,
-                        ),
+                        color: Colors.white.withValues(alpha: 0.15),
                       ),
                     ),
                     child: const Icon(
@@ -387,11 +359,8 @@ class _LockPage extends StatelessWidget {
                       width: double.infinity,
                       padding: const EdgeInsets.all(13),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(
-                          alpha: 0.08,
-                        ),
-                        borderRadius:
-                        BorderRadius.circular(15),
+                        color: Colors.white.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(15),
                       ),
                       child: Text(
                         errorMessage!,
@@ -411,59 +380,46 @@ class _LockPage extends StatelessWidget {
                     width: double.infinity,
                     height: 57,
                     child: ElevatedButton(
-                      onPressed:
-                      authenticating ? null : onUnlock,
+                      onPressed: authenticating ? null : onUnlock,
                       style: ElevatedButton.styleFrom(
                         elevation: 0,
-                        backgroundColor:
-                        Colors.white,
-                        foregroundColor:
-                        AppColors.navy,
-                        disabledBackgroundColor:
-                        Colors.white70,
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.navy,
+                        disabledBackgroundColor: Colors.white70,
                         shape: RoundedRectangleBorder(
-                          borderRadius:
-                          BorderRadius.circular(18),
+                          borderRadius: BorderRadius.circular(18),
                         ),
                       ),
                       child: authenticating
                           ? const SizedBox(
-                        width: 23,
-                        height: 23,
-                        child:
-                        CircularProgressIndicator(
-                          strokeWidth: 2.4,
-                          color: AppColors.navy,
-                        ),
-                      )
+                              width: 23,
+                              height: 23,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                color: AppColors.navy,
+                              ),
+                            )
                           : const Row(
-                        mainAxisAlignment:
-                        MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons
-                                .fingerprint_rounded,
-                            size: 25,
-                          ),
-                          SizedBox(width: 10),
-                          Text(
-                            'Kimliğimi Doğrula',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight:
-                              FontWeight.w800,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.fingerprint_rounded, size: 25),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Kimliğimi Doğrula',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
 
                   const SizedBox(height: 12),
 
                   TextButton(
-                    onPressed:
-                    authenticating ? null : onLogout,
+                    onPressed: authenticating ? null : onLogout,
                     child: const Text(
                       'Farklı hesapla giriş yap',
                       style: TextStyle(
@@ -477,8 +433,7 @@ class _LockPage extends StatelessWidget {
                   const Spacer(),
 
                   const Row(
-                    mainAxisAlignment:
-                    MainAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
                         Icons.shield_outlined,
@@ -562,15 +517,9 @@ class _LockLogo extends StatelessWidget {
       height: 48,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(
-          alpha: 0.11,
-        ),
+        color: Colors.white.withValues(alpha: 0.11),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withValues(
-            alpha: 0.18,
-          ),
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
       ),
       child: const Text(
         'IBT',
