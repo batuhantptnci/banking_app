@@ -23,7 +23,9 @@ class _SessionGateState extends State<SessionGate> with WidgetsBindingObserver {
   bool _unlocked = false;
   bool _authenticating = false;
 
-  bool _shouldAutoAuthenticate = false;
+  DateTime? _backgroundedAt;
+
+  static const Duration _backgroundLockDelay = Duration(seconds: 60);
 
   String? _errorMessage;
 
@@ -49,30 +51,49 @@ class _SessionGateState extends State<SessionGate> with WidgetsBindingObserver {
   // ---------------------------------------------------------------------------
 
   @override
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!_hasSession) return;
 
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused ||
-        state == AppLifecycleState.hidden) {
-      if (_unlocked) {
+    switch (state) {
+      case AppLifecycleState.inactive:
+        // Bildirim paneli, kontrol merkezi gibi geçici durumlar.
+        // Uygulamayı KİLİTLEME.
+        break;
+
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+        // Gerçekten arka plana gittiyse zamanı kaydet.
+        _backgroundedAt ??= DateTime.now();
+        break;
+
+      case AppLifecycleState.resumed:
+        final backgroundedAt = _backgroundedAt;
+
+        _backgroundedAt = null;
+
+        if (backgroundedAt == null || !_unlocked) {
+          return;
+        }
+
+        final backgroundDuration = DateTime.now().difference(backgroundedAt);
+
+        // 1 dakikadan kısa arka plan geçişlerinde
+        // kullanıcıyı tekrar doğrulamaya zorlama.
+        if (backgroundDuration < _backgroundLockDelay) {
+          return;
+        }
+
+        if (!mounted) return;
+
         setState(() {
           _unlocked = false;
-          _shouldAutoAuthenticate = true;
         });
-      }
-    }
 
-    if (state == AppLifecycleState.resumed &&
-        _hasSession &&
-        !_unlocked &&
-        _shouldAutoAuthenticate &&
-        !_authenticating) {
-      _shouldAutoAuthenticate = false;
+        break;
 
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _authenticate();
-      });
+      case AppLifecycleState.detached:
+        break;
     }
   }
 
@@ -137,7 +158,7 @@ class _SessionGateState extends State<SessionGate> with WidgetsBindingObserver {
       final bool authenticated = await _localAuth.authenticate(
         localizedReason: 'IBT Bank hesabına erişmek için kimliğini doğrula',
         biometricOnly: false,
-        persistAcrossBackgrounding: false ,
+        persistAcrossBackgrounding: false,
       );
 
       if (!mounted) return;
