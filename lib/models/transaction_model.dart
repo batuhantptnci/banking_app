@@ -3,8 +3,19 @@ class TransactionModel {
   final String type;
   final String direction;
   final double amount;
+
   final int accountId;
+  final String? accountNumber;
+  final String? accountHolderName;
+
   final int? targetAccountId;
+  final String? targetAccountNumber;
+  final String? targetAccountHolderName;
+
+  final String description;
+  final String channel;
+  final String status;
+
   final DateTime createdAt;
 
   const TransactionModel({
@@ -13,7 +24,14 @@ class TransactionModel {
     required this.direction,
     required this.amount,
     required this.accountId,
+    required this.accountNumber,
+    required this.accountHolderName,
     required this.targetAccountId,
+    required this.targetAccountNumber,
+    required this.targetAccountHolderName,
+    required this.description,
+    required this.channel,
+    required this.status,
     required this.createdAt,
   });
 
@@ -23,11 +41,26 @@ class TransactionModel {
       type: json['type'] as String,
       direction: json['direction'] as String,
       amount: (json['amount'] as num).toDouble(),
+
       accountId: json['accountId'] as int,
+      accountNumber: json['accountNumber'] as String?,
+      accountHolderName: json['accountHolderName'] as String?,
+
       targetAccountId: json['targetAccountId'] as int?,
+      targetAccountNumber: json['targetAccountNumber'] as String?,
+      targetAccountHolderName: json['targetAccountHolderName'] as String?,
+
+      description: json['description']?.toString() ?? 'IBT Bank işlemi',
+
+      channel: json['channel']?.toString() ?? 'IBT Mobil',
+
+      status: json['status']?.toString() ?? 'COMPLETED',
+
       createdAt: DateTime.parse(json['createdAt'] as String),
     );
   }
 
   bool get isIncoming => direction == 'INCOMING';
+
+  bool get isTransfer => type == 'TRANSFER';
 }

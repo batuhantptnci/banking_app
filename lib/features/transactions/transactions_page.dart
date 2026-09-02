@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'transaction_detail_page.dart';
 import '../../models/account_model.dart';
 import '../../models/transaction_model.dart';
 import '../../services/api_service.dart';
@@ -242,58 +243,76 @@ class _TransactionsPageState extends State<TransactionsPage> {
   Widget _transactionRow(TransactionModel transaction) {
     final incoming = transaction.isIncoming;
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: const BoxDecoration(
-              color: Color(0xFFE8F3F4),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(_iconFor(transaction), color: teal),
+    return InkWell(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => TransactionDetailPage(transaction: transaction),
           ),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: const BoxDecoration(
+                color: Color(0xFFE8F3F4),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(_iconFor(transaction), color: teal),
+            ),
 
-          const SizedBox(width: 14),
+            const SizedBox(width: 14),
 
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _titleFor(transaction),
+                    style: const TextStyle(
+                      color: text,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  Text(
+                    _formatDate(transaction.createdAt),
+                    style: const TextStyle(color: muted, fontSize: 11.5),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 8),
+
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  _titleFor(transaction),
-                  style: const TextStyle(
-                    color: text,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
+                  '${incoming ? '+' : '-'}${_formatMoney(transaction.amount)}',
+                  style: TextStyle(
+                    color: incoming
+                        ? const Color(0xFF2E8B6D)
+                        : const Color(0xFFC74B50),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
 
-                const SizedBox(height: 4),
+                const SizedBox(height: 5),
 
-                Text(
-                  _formatDate(transaction.createdAt),
-                  style: const TextStyle(color: muted, fontSize: 11.5),
-                ),
+                const Icon(Icons.chevron_right_rounded, color: muted, size: 18),
               ],
             ),
-          ),
-
-          const SizedBox(width: 10),
-
-          Text(
-            '${incoming ? '+' : '-'}${_formatMoney(transaction.amount)}',
-            style: TextStyle(
-              color: incoming
-                  ? const Color(0xFF2E8B6D)
-                  : const Color(0xFFC74B50),
-              fontSize: 14.5,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

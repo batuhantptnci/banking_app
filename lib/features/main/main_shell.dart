@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../for_you/for_you_page.dart';
 import '../home/home_page.dart';
 import '../transactions/transactions_page.dart';
 import '../transfer/transfer_payment_page.dart';
-import '../for_you/for_you_page.dart';
 
 class MainShell extends StatefulWidget {
-  const MainShell({super.key});
+  final Future<void> Function() onLogout;
+
+  const MainShell({super.key, required this.onLogout});
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -40,7 +42,7 @@ class _MainShellState extends State<MainShell> {
         return const ForYouPage();
 
       default:
-        return const HomePage(embedded: true);
+        return HomePage(embedded: true, onLogout: widget.onLogout);
     }
   }
 

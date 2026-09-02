@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:banking_app/models/recipient_model.dart';
+import 'package:banking_app/models/transaction_model.dart';
 import 'package:banking_app/models/account_model.dart';
 import 'package:banking_app/services/api_service.dart';
 
@@ -36,7 +38,11 @@ class _AccountActionSheetState extends State<AccountActionSheet> {
 
   bool _loading = false;
   String? _error;
+  RecipientModel? _recipient;
+  bool _recipientLoading = false;
+  String? _recipientError;
 
+  int _recipientLookupVersion = 0;
   @override
   void initState() {
     super.initState();
@@ -104,6 +110,65 @@ class _AccountActionSheetState extends State<AccountActionSheet> {
     }
   }
 
+  Future<void> _onReceiverChanged(String value) async {
+    final normalized = value.trim().toUpperCase();
+
+    final requestVersion = ++_recipientLookupVersion;
+
+    setState(() {
+      _recipient = null;
+      _recipientError = null;
+      _error = null;
+    });
+
+    final valid = RegExp(r'^ACC-[A-Z0-9]{8}$').hasMatch(normalized);
+
+    if (!valid) {
+      setState(() {
+        _recipientLoading = false;
+      });
+
+      return;
+    }
+
+    if (normalized == _selectedAccount.accountNumber.toUpperCase()) {
+      setState(() {
+        _recipientLoading = false;
+        _recipientError = 'Kendi hesabına transfer yapamazsın.';
+      });
+
+      return;
+    }
+
+    setState(() {
+      _recipientLoading = true;
+    });
+
+    try {
+      final recipient = await ApiService.lookupRecipient(normalized);
+
+      if (!mounted || requestVersion != _recipientLookupVersion) {
+        return;
+      }
+
+      setState(() {
+        _recipient = recipient;
+        _recipientLoading = false;
+        _recipientError = null;
+      });
+    } catch (_) {
+      if (!mounted || requestVersion != _recipientLookupVersion) {
+        return;
+      }
+
+      setState(() {
+        _recipient = null;
+        _recipientLoading = false;
+        _recipientError = 'Bu hesap numarasına ait alıcı bulunamadı.';
+      });
+    }
+  }
+
   double? _parseAmount() {
     final normalized = _amountController.text
         .trim()
@@ -153,6 +218,18 @@ class _AccountActionSheetState extends State<AccountActionSheet> {
 
       if (receiver == _selectedAccount.accountNumber.toUpperCase()) {
         return 'Kendi hesabına transfer yapamazsın.';
+      }
+
+      if (_recipientLoading) {
+        return 'Alıcı bilgisi kontrol ediliyor.';
+      }
+
+      if (_recipientError != null) {
+        return _recipientError;
+      }
+
+      if (_recipient == null) {
+        return 'Alıcı doğrulanamadı.';
       }
     }
 
@@ -228,11 +305,12 @@ class _AccountActionSheetState extends State<AccountActionSheet> {
 
               _confirmationRow('Hesap', _selectedAccount.accountNumber),
 
-              if (widget.action == AccountActionType.transfer)
-                _confirmationRow(
-                  'Alıcı',
-                  _receiverController.text.trim().toUpperCase(),
-                ),
+              _confirmationRow('Alıcı', _recipient?.fullName ?? '-'),
+
+              _confirmationRow(
+                'Alıcı Hesap',
+                _receiverController.text.trim().toUpperCase(),
+              ),
 
               _confirmationRow('Tutar', _formatMoney(amount), highlight: true),
             ],
@@ -297,23 +375,25 @@ class _AccountActionSheetState extends State<AccountActionSheet> {
     });
 
     try {
+      late TransactionModel transaction;
+
       switch (widget.action) {
         case AccountActionType.deposit:
-          await ApiService.deposit(
+          transaction = await ApiService.deposit(
             accountId: _selectedAccount.id,
             amount: amount,
           );
           break;
 
         case AccountActionType.withdraw:
-          await ApiService.withdraw(
+          transaction = await ApiService.withdraw(
             accountId: _selectedAccount.id,
             amount: amount,
           );
           break;
 
         case AccountActionType.transfer:
-          await ApiService.transfer(
+          transaction = await ApiService.transfer(
             fromAccountId: _selectedAccount.id,
             toAccountNumber: _receiverController.text,
             amount: amount,
@@ -323,7 +403,7 @@ class _AccountActionSheetState extends State<AccountActionSheet> {
 
       if (!mounted) return;
 
-      Navigator.of(context).pop(true);
+      Navigator.of(context).pop(transaction);
     } catch (e) {
       if (!mounted) return;
 
@@ -424,7 +504,12 @@ class _AccountActionSheetState extends State<AccountActionSheet> {
 
                 if (widget.action == AccountActionType.transfer) ...[
                   const SizedBox(height: 15),
+
                   _buildReceiverField(),
+
+                  const SizedBox(height: 10),
+
+                  _buildRecipientStatus(),
                 ],
 
                 const SizedBox(height: 15),
@@ -437,12 +522,8 @@ class _AccountActionSheetState extends State<AccountActionSheet> {
 
                 if (widget.action != AccountActionType.deposit) ...[
                   const SizedBox(height: 14),
-                  _buildBalanceInfo(),
-                ],
 
-                if (_error != null) ...[
-                  const SizedBox(height: 16),
-                  _buildError(),
+                  _buildBalanceInfo(),
                 ],
 
                 const SizedBox(height: 22),
@@ -601,6 +682,99 @@ class _AccountActionSheetState extends State<AccountActionSheet> {
     );
   }
 
+  Widget _buildRecipientStatus() {
+    if (_recipientLoading) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEAF6F6),
+          borderRadius: BorderRadius.circular(13),
+        ),
+        child: const Row(
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2, color: teal),
+            ),
+            SizedBox(width: 10),
+            Text(
+              'Alıcı kontrol ediliyor...',
+              style: TextStyle(color: muted, fontSize: 12),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_recipient != null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE8F5EE),
+          borderRadius: BorderRadius.circular(13),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.check_circle_rounded,
+              color: Color(0xFF218A63),
+              size: 21,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Alıcı bulundu',
+                    style: TextStyle(
+                      color: Color(0xFF218A63),
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _recipient!.fullName,
+                    style: const TextStyle(
+                      color: navy,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_recipientError != null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFEEEE),
+          borderRadius: BorderRadius.circular(13),
+        ),
+        child: Text(
+          _recipientError!,
+          style: const TextStyle(
+            color: Color(0xFFB42318),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+
   Widget _buildReceiverField() {
     return TextField(
       controller: _receiverController,
@@ -611,13 +785,7 @@ class _AccountActionSheetState extends State<AccountActionSheet> {
         LengthLimitingTextInputFormatter(12),
         _UpperCaseTextFormatter(),
       ],
-      onChanged: (_) {
-        if (_error != null) {
-          setState(() {
-            _error = null;
-          });
-        }
-      },
+      onChanged: _onReceiverChanged,
       decoration: InputDecoration(
         labelText: 'Alıcı hesap numarası',
         hintText: 'ACC-XXXXXXXX',
@@ -740,42 +908,6 @@ class _AccountActionSheetState extends State<AccountActionSheet> {
               color: navy,
               fontSize: 12.5,
               fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildError() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFEEEE),
-        borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: const Color(0xFFFFD5D2)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(
-            Icons.error_outline_rounded,
-            color: Color(0xFFB42318),
-            size: 19,
-          ),
-
-          const SizedBox(width: 9),
-
-          Expanded(
-            child: Text(
-              _error!,
-              style: const TextStyle(
-                color: Color(0xFFB42318),
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                height: 1.35,
-              ),
             ),
           ),
         ],

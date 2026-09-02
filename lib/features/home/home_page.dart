@@ -7,8 +7,9 @@ import 'package:banking_app/features/home/account_action_sheet.dart';
 
 class HomePage extends StatefulWidget {
   final bool embedded;
+  final Future<void> Function()? onLogout;
 
-  const HomePage({super.key, this.embedded = false});
+  const HomePage({super.key, this.embedded = false, this.onLogout});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -47,6 +48,132 @@ class _HomePageState extends State<HomePage> {
     }
 
     return 'İyi akşamlar';
+  }
+
+  Future<void> _showProfileMenu() async {
+    final shouldLogout = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Container(
+            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD8DDE1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                Container(
+                  width: 58,
+                  height: 58,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFE8F3F4),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.person_outline_rounded,
+                    color: teal,
+                    size: 29,
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                Text(
+                  _customerFirstName,
+                  style: const TextStyle(
+                    color: navy,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+
+                const SizedBox(height: 22),
+
+                const Divider(height: 1),
+
+                const SizedBox(height: 10),
+
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                  leading: const Icon(
+                    Icons.logout_rounded,
+                    color: Color(0xFFC74B50),
+                  ),
+                  title: const Text(
+                    'Çıkış Yap',
+                    style: TextStyle(
+                      color: Color(0xFFC74B50),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'IBT Bank oturumunu kapat',
+                    style: TextStyle(color: muted, fontSize: 11.5),
+                  ),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop(true);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (shouldLogout != true || widget.onLogout == null || !mounted) {
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Çıkış yapılsın mı?'),
+          content: const Text(
+            'IBT Bank oturumun güvenli bir şekilde kapatılacak.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text('Vazgeç'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFC74B50),
+              ),
+              child: const Text('Çıkış Yap'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    await widget.onLogout!();
   }
 
   Future<void> _openAccountAction(AccountActionType action) async {
@@ -497,17 +624,21 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
 
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.16),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.person_outline_rounded,
-              color: Colors.white,
-              size: 23,
+          InkWell(
+            onTap: _showProfileMenu,
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.16),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.person_outline_rounded,
+                color: Colors.white,
+                size: 23,
+              ),
             ),
           ),
         ],

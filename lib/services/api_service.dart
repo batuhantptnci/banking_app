@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:banking_app/models/recipient_model.dart';
 import 'package:banking_app/models/account_model.dart';
 import 'package:banking_app/models/transaction_model.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -194,7 +195,7 @@ class ApiService {
     throw Exception('Hesaplar alınamadı (${response.statusCode})');
   }
 
-  static Future<AccountModel> deposit({
+  static Future<TransactionModel> deposit({
     required int accountId,
     required double amount,
   }) async {
@@ -203,21 +204,25 @@ class ApiService {
       {'amount': amount},
     );
 
-    final body = _decodeBody(response);
+    if (response.statusCode != 200) {
+      final body = _decodeBody(response);
 
-    if (response.statusCode == 200) {
-      return AccountModel.fromJson(body);
+      throw Exception(
+        _extractError(
+          body,
+          fallback: 'Para yatırma işlemi başarısız (${response.statusCode})',
+        ),
+      );
     }
 
-    throw Exception(
-      _extractError(
-        body,
-        fallback: 'Para yatırma işlemi başarısız (${response.statusCode})',
-      ),
+    return _getLatestTransaction(
+      accountId: accountId,
+      type: 'DEPOSIT',
+      amount: amount,
     );
   }
 
-  static Future<AccountModel> withdraw({
+  static Future<TransactionModel> withdraw({
     required int accountId,
     required double amount,
   }) async {
@@ -226,21 +231,25 @@ class ApiService {
       {'amount': amount},
     );
 
-    final body = _decodeBody(response);
+    if (response.statusCode != 200) {
+      final body = _decodeBody(response);
 
-    if (response.statusCode == 200) {
-      return AccountModel.fromJson(body);
+      throw Exception(
+        _extractError(
+          body,
+          fallback: 'Para çekme işlemi başarısız (${response.statusCode})',
+        ),
+      );
     }
 
-    throw Exception(
-      _extractError(
-        body,
-        fallback: 'Para çekme işlemi başarısız (${response.statusCode})',
-      ),
+    return _getLatestTransaction(
+      accountId: accountId,
+      type: 'WITHDRAW',
+      amount: amount,
     );
   }
 
-  static Future<void> transfer({
+  static Future<TransactionModel> transfer({
     required int fromAccountId,
     required String toAccountNumber,
     required double amount,
@@ -251,18 +260,40 @@ class ApiService {
       'amount': amount,
     });
 
-    if (response.statusCode == 200) {
-      return;
+    if (response.statusCode != 200) {
+      final body = _decodeBody(response);
+
+      throw Exception(
+        _extractError(
+          body,
+          fallback: 'Transfer işlemi başarısız (${response.statusCode})',
+        ),
+      );
     }
+
+    return _getLatestTransaction(
+      accountId: fromAccountId,
+      type: 'TRANSFER',
+      amount: amount,
+    );
+  }
+
+  static Future<RecipientModel> lookupRecipient(String accountNumber) async {
+    final normalized = accountNumber.trim().toUpperCase();
+
+    final encoded = Uri.encodeQueryComponent(normalized);
+
+    final response = await authenticatedGet(
+      '/api/accounts/recipient?accountNumber=$encoded',
+    );
 
     final body = _decodeBody(response);
 
-    throw Exception(
-      _extractError(
-        body,
-        fallback: 'Transfer işlemi başarısız (${response.statusCode})',
-      ),
-    );
+    if (response.statusCode == 200) {
+      return RecipientModel.fromJson(body);
+    }
+
+    throw Exception(_extractError(body, fallback: 'Alıcı hesap bulunamadı.'));
   }
 
   // ===========================================================================
@@ -407,6 +438,24 @@ class ApiService {
   // ===========================================================================
   // PRIVATE
   // ===========================================================================
+
+  static Future<TransactionModel> _getLatestTransaction({
+    required int accountId,
+    required String type,
+    required double amount,
+  }) async {
+    final transactions = await getAccountTransactions(accountId);
+
+    for (final transaction in transactions) {
+      final sameAmount = (transaction.amount - amount).abs() < 0.01;
+
+      if (transaction.type == type && sameAmount) {
+        return transaction;
+      }
+    }
+
+    throw Exception('İşlem tamamlandı ancak dekont bilgisi alınamadı.');
+  }
 
   static Future<void> _ensureTokensLoaded() async {
     if (accessToken == null || refreshToken == null) {

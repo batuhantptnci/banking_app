@@ -226,7 +226,7 @@ class _SessionGateState extends State<SessionGate> with WidgetsBindingObserver {
     }
 
     // Kimlik doğrulandı.
-    return const MainShell();
+    return MainShell(onLogout: _logout);
   }
 }
 

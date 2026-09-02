@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../models/transaction_model.dart';
+import '../transactions/transaction_detail_page.dart';
 import '../../models/account_model.dart';
 import '../../services/api_service.dart';
 import '../home/account_action_sheet.dart';
@@ -78,7 +80,7 @@ class _TransferPaymentPageState extends State<TransferPaymentPage> {
       return;
     }
 
-    final result = await showModalBottomSheet<bool>(
+    final transaction = await showModalBottomSheet<TransactionModel>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -86,7 +88,7 @@ class _TransferPaymentPageState extends State<TransferPaymentPage> {
       builder: (_) => AccountActionSheet(action: action, accounts: _accounts),
     );
 
-    if (result != true) {
+    if (transaction == null) {
       return;
     }
 
@@ -94,25 +96,12 @@ class _TransferPaymentPageState extends State<TransferPaymentPage> {
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_successMessage(action)),
-        behavior: SnackBarBehavior.floating,
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) =>
+            TransactionDetailPage(transaction: transaction, showSuccess: true),
       ),
     );
-  }
-
-  String _successMessage(AccountActionType action) {
-    switch (action) {
-      case AccountActionType.deposit:
-        return 'Para yatırma işlemi tamamlandı.';
-
-      case AccountActionType.withdraw:
-        return 'Para çekme işlemi tamamlandı.';
-
-      case AccountActionType.transfer:
-        return 'Transfer başarıyla tamamlandı.';
-    }
   }
 
   void _showComingSoon(String title) {
