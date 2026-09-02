@@ -32,7 +32,19 @@ class _HomePageState extends State<HomePage> {
   ];
 
   int selectedTab = 0;
+  String get _greeting {
+    final hour = DateTime.now().hour;
 
+    if (hour < 12) {
+      return 'Günaydın';
+    }
+
+    if (hour < 18) {
+      return 'İyi günler';
+    }
+
+    return 'İyi akşamlar';
+  }
   // ---------------------------------------------------------------------------
   // ACCOUNT STATE
   // ---------------------------------------------------------------------------
@@ -48,7 +60,7 @@ class _HomePageState extends State<HomePage> {
   List<TransactionModel> _transactions = [];
   bool _transactionsLoading = true;
   String? _transactionsError;
-
+  String _customerFirstName = 'Müşteri';
   double get _totalBalance {
     return _accounts.fold(0, (total, account) => total + account.balance);
   }
@@ -183,7 +195,25 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+
+    _loadCustomerName();
     _loadAccounts();
+  }
+
+  Future<void> _loadCustomerName() async {
+    final fullName = await ApiService.getUserFullName();
+
+    if (!mounted) return;
+
+    if (fullName == null || fullName.trim().isEmpty) {
+      return;
+    }
+
+    final firstName = fullName.trim().split(RegExp(r'\s+')).first;
+
+    setState(() {
+      _customerFirstName = firstName;
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -384,22 +414,20 @@ class _HomePageState extends State<HomePage> {
 
           const SizedBox(width: 14),
 
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'İyi günler Batuhan,',
-                  style: TextStyle(
+                  '$_greeting $_customerFirstName,',
+                  style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-
-                SizedBox(height: 3),
-
-                Text(
+                const SizedBox(height: 3),
+                const Text(
                   'IBT Bank',
                   style: TextStyle(
                     color: Colors.white,

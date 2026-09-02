@@ -14,7 +14,7 @@ class RegisterResult {
 
 class ApiService {
   static const String baseUrl = 'http://192.168.1.16:8080';
-
+  static const String _fullNameKey = 'user_full_name';
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
 
   static const String _accessTokenKey = 'access_token';
@@ -282,8 +282,12 @@ class ApiService {
     refreshToken = null;
 
     await _storage.delete(key: _accessTokenKey);
-
     await _storage.delete(key: _refreshTokenKey);
+    await _storage.delete(key: _fullNameKey);
+  }
+
+  static Future<String?> getUserFullName() async {
+    return _storage.read(key: _fullNameKey);
   }
 
   // ===========================================================================
@@ -298,7 +302,6 @@ class ApiService {
 
   static Future<void> _saveAuthResponse(Map<String, dynamic> body) async {
     final newAccessToken = body['token'] as String?;
-
     final newRefreshToken = body['refreshToken'] as String?;
 
     if (newAccessToken == null ||
@@ -314,6 +317,16 @@ class ApiService {
     await _storage.write(key: _accessTokenKey, value: accessToken);
 
     await _storage.write(key: _refreshTokenKey, value: refreshToken);
+
+    final user = body['user'];
+
+    if (user is Map<String, dynamic>) {
+      final fullName = user['fullName']?.toString().trim();
+
+      if (fullName != null && fullName.isNotEmpty) {
+        await _storage.write(key: _fullNameKey, value: fullName);
+      }
+    }
   }
 
   static Map<String, dynamic> _decodeBody(http.Response response) {
