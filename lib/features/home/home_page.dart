@@ -3,9 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:banking_app/services/api_service.dart';
 import 'package:banking_app/models/account_model.dart';
 import 'package:banking_app/models/transaction_model.dart';
+import 'package:banking_app/features/home/account_action_sheet.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final bool embedded;
+
+  const HomePage({super.key, this.embedded = false});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -44,6 +47,37 @@ class _HomePageState extends State<HomePage> {
     }
 
     return 'İyi akşamlar';
+  }
+
+  Future<void> _openAccountAction(AccountActionType action) async {
+    if (_accounts.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('İşlem yapılabilecek hesap bulunamadı.')),
+      );
+
+      return;
+    }
+
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (_) => AccountActionSheet(action: action, accounts: _accounts),
+    );
+
+    if (result == true) {
+      await _reloadDashboard();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('İşlem başarıyla tamamlandı.')),
+      );
+    }
   }
   // ---------------------------------------------------------------------------
   // ACCOUNT STATE
@@ -378,7 +412,7 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
         ),
-        bottomNavigationBar: _buildBottomNavigation(),
+        bottomNavigationBar: widget.embedded ? null : _buildBottomNavigation(),
       ),
     );
   }
@@ -2184,6 +2218,80 @@ class _HomePageState extends State<HomePage> {
       selectedFontSize: 11.5,
       unselectedFontSize: 11.5,
       elevation: 10,
+
+      onTap: (index) {
+        if (index != 2) return;
+
+        showModalBottomSheet<void>(
+          context: context,
+          backgroundColor: Colors.white,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          builder: (sheetContext) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Hangi işlemi yapmak istiyorsun?',
+                      style: TextStyle(
+                        color: navy,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    ListTile(
+                      leading: const Icon(
+                        Icons.add_circle_outline,
+                        color: teal,
+                      ),
+                      title: const Text('Para Yatır'),
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+
+                        _openAccountAction(AccountActionType.deposit);
+                      },
+                    ),
+
+                    ListTile(
+                      leading: const Icon(
+                        Icons.remove_circle_outline,
+                        color: teal,
+                      ),
+                      title: const Text('Para Çek'),
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+
+                        _openAccountAction(AccountActionType.withdraw);
+                      },
+                    ),
+
+                    ListTile(
+                      leading: const Icon(
+                        Icons.swap_horiz_rounded,
+                        color: teal,
+                      ),
+                      title: const Text('Para Transferi'),
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+
+                        _openAccountAction(AccountActionType.transfer);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+
       items: const [
         BottomNavigationBarItem(
           icon: Icon(Icons.home_outlined),

@@ -1,9 +1,9 @@
 import 'dart:convert';
 
 import 'package:banking_app/models/account_model.dart';
+import 'package:banking_app/models/transaction_model.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
-import 'package:banking_app/models/transaction_model.dart';
 
 class RegisterResult {
   final String fullName;
@@ -14,11 +14,12 @@ class RegisterResult {
 
 class ApiService {
   static const String baseUrl = 'http://192.168.1.16:8080';
-  static const String _fullNameKey = 'user_full_name';
+
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
 
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
+  static const String _fullNameKey = 'user_full_name';
 
   static String? accessToken;
   static String? refreshToken;
@@ -170,6 +171,7 @@ class ApiService {
       return false;
     }
   }
+
   // ===========================================================================
   // ACCOUNTS
   // ===========================================================================
@@ -191,6 +193,78 @@ class ApiService {
 
     throw Exception('Hesaplar alınamadı (${response.statusCode})');
   }
+
+  static Future<AccountModel> deposit({
+    required int accountId,
+    required double amount,
+  }) async {
+    final response = await authenticatedPost(
+      '/api/accounts/$accountId/deposit',
+      {'amount': amount},
+    );
+
+    final body = _decodeBody(response);
+
+    if (response.statusCode == 200) {
+      return AccountModel.fromJson(body);
+    }
+
+    throw Exception(
+      _extractError(
+        body,
+        fallback: 'Para yatırma işlemi başarısız (${response.statusCode})',
+      ),
+    );
+  }
+
+  static Future<AccountModel> withdraw({
+    required int accountId,
+    required double amount,
+  }) async {
+    final response = await authenticatedPost(
+      '/api/accounts/$accountId/withdraw',
+      {'amount': amount},
+    );
+
+    final body = _decodeBody(response);
+
+    if (response.statusCode == 200) {
+      return AccountModel.fromJson(body);
+    }
+
+    throw Exception(
+      _extractError(
+        body,
+        fallback: 'Para çekme işlemi başarısız (${response.statusCode})',
+      ),
+    );
+  }
+
+  static Future<void> transfer({
+    required int fromAccountId,
+    required String toAccountNumber,
+    required double amount,
+  }) async {
+    final response = await authenticatedPost('/api/accounts/transfer', {
+      'fromAccountId': fromAccountId,
+      'toAccountNumber': toAccountNumber.trim().toUpperCase(),
+      'amount': amount,
+    });
+
+    if (response.statusCode == 200) {
+      return;
+    }
+
+    final body = _decodeBody(response);
+
+    throw Exception(
+      _extractError(
+        body,
+        fallback: 'Transfer işlemi başarısız (${response.statusCode})',
+      ),
+    );
+  }
+
   // ===========================================================================
   // TRANSACTIONS
   // ===========================================================================
@@ -218,6 +292,7 @@ class ApiService {
 
     throw Exception('İşlemler alınamadı (${response.statusCode})');
   }
+
   // ===========================================================================
   // AUTHENTICATED GET
   // ===========================================================================
@@ -238,6 +313,43 @@ class ApiService {
 
       response = await http
           .get(Uri.parse('$baseUrl$path'), headers: await authHeaders())
+          .timeout(const Duration(seconds: 10));
+    }
+
+    return response;
+  }
+
+  // ===========================================================================
+  // AUTHENTICATED POST
+  // ===========================================================================
+
+  static Future<http.Response> authenticatedPost(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    await _ensureTokensLoaded();
+
+    var response = await http
+        .post(
+          Uri.parse('$baseUrl$path'),
+          headers: await authHeaders(),
+          body: jsonEncode(body),
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode == 401) {
+      final refreshed = await refreshSession();
+
+      if (!refreshed) {
+        throw Exception('Oturum süresi doldu. Tekrar giriş yap.');
+      }
+
+      response = await http
+          .post(
+            Uri.parse('$baseUrl$path'),
+            headers: await authHeaders(),
+            body: jsonEncode(body),
+          )
           .timeout(const Duration(seconds: 10));
     }
 
@@ -282,7 +394,9 @@ class ApiService {
     refreshToken = null;
 
     await _storage.delete(key: _accessTokenKey);
+
     await _storage.delete(key: _refreshTokenKey);
+
     await _storage.delete(key: _fullNameKey);
   }
 
@@ -302,6 +416,7 @@ class ApiService {
 
   static Future<void> _saveAuthResponse(Map<String, dynamic> body) async {
     final newAccessToken = body['token'] as String?;
+
     final newRefreshToken = body['refreshToken'] as String?;
 
     if (newAccessToken == null ||

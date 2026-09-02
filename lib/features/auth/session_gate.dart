@@ -3,7 +3,7 @@ import 'package:local_auth/local_auth.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../services/api_service.dart';
-import '../home/home_page.dart';
+import '../main/main_shell.dart';
 import 'login_page.dart';
 
 class SessionGate extends StatefulWidget {
@@ -91,13 +91,14 @@ class _SessionGateState extends State<SessionGate> with WidgetsBindingObserver {
         _loading = false;
       });
 
-      // Daha önce login olmuş kullanıcı uygulamayı yeniden açtıysa
-      // biyometrik / cihaz kilidi iste.
-      if (loggedIn && !_unlocked) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _authenticate();
-        });
-      }
+      // Uygulama açılır açılmaz native doğrulama ekranını
+      // zorla açmıyoruz.
+      //
+      // Kullanıcı önce IBT Bank kilit ekranını görür,
+      // ardından "Kimliğimi Doğrula" butonuna basar.
+      //
+      // Bu özellikle Android emulator'da oluşabilen
+      // siyah native auth ekranını önler.
     } catch (_) {
       if (!mounted) return;
 
@@ -136,7 +137,7 @@ class _SessionGateState extends State<SessionGate> with WidgetsBindingObserver {
       final bool authenticated = await _localAuth.authenticate(
         localizedReason: 'IBT Bank hesabına erişmek için kimliğini doğrula',
         biometricOnly: false,
-        persistAcrossBackgrounding: true,
+        persistAcrossBackgrounding: false ,
       );
 
       if (!mounted) return;
@@ -204,7 +205,7 @@ class _SessionGateState extends State<SessionGate> with WidgetsBindingObserver {
     }
 
     // Kimlik doğrulandı.
-    return const HomePage();
+    return const MainShell();
   }
 }
 
