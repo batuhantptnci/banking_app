@@ -12,6 +12,8 @@ class TransactionModel {
   final String? targetAccountNumber;
   final String? targetAccountHolderName;
 
+  final double? balanceAfter;
+
   final String description;
   final String channel;
   final String status;
@@ -29,6 +31,7 @@ class TransactionModel {
     required this.targetAccountId,
     required this.targetAccountNumber,
     required this.targetAccountHolderName,
+    required this.balanceAfter,
     required this.description,
     required this.channel,
     required this.status,
@@ -38,17 +41,26 @@ class TransactionModel {
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
     return TransactionModel(
       id: json['id'] as int,
+
       type: json['type'] as String,
+
       direction: json['direction'] as String,
+
       amount: (json['amount'] as num).toDouble(),
 
       accountId: json['accountId'] as int,
+
       accountNumber: json['accountNumber'] as String?,
+
       accountHolderName: json['accountHolderName'] as String?,
 
       targetAccountId: json['targetAccountId'] as int?,
+
       targetAccountNumber: json['targetAccountNumber'] as String?,
+
       targetAccountHolderName: json['targetAccountHolderName'] as String?,
+
+      balanceAfter: (json['balanceAfter'] as num?)?.toDouble(),
 
       description: json['description']?.toString() ?? 'IBT Bank işlemi',
 

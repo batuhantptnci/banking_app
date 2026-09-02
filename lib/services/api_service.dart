@@ -204,21 +204,17 @@ class ApiService {
       {'amount': amount},
     );
 
-    if (response.statusCode != 200) {
-      final body = _decodeBody(response);
+    final body = _decodeBody(response);
 
-      throw Exception(
-        _extractError(
-          body,
-          fallback: 'Para yatırma işlemi başarısız (${response.statusCode})',
-        ),
-      );
+    if (response.statusCode == 200) {
+      return TransactionModel.fromJson(body);
     }
 
-    return _getLatestTransaction(
-      accountId: accountId,
-      type: 'DEPOSIT',
-      amount: amount,
+    throw Exception(
+      _extractError(
+        body,
+        fallback: 'Para yatırma işlemi başarısız (${response.statusCode})',
+      ),
     );
   }
 
@@ -231,21 +227,17 @@ class ApiService {
       {'amount': amount},
     );
 
-    if (response.statusCode != 200) {
-      final body = _decodeBody(response);
+    final body = _decodeBody(response);
 
-      throw Exception(
-        _extractError(
-          body,
-          fallback: 'Para çekme işlemi başarısız (${response.statusCode})',
-        ),
-      );
+    if (response.statusCode == 200) {
+      return TransactionModel.fromJson(body);
     }
 
-    return _getLatestTransaction(
-      accountId: accountId,
-      type: 'WITHDRAW',
-      amount: amount,
+    throw Exception(
+      _extractError(
+        body,
+        fallback: 'Para çekme işlemi başarısız (${response.statusCode})',
+      ),
     );
   }
 
@@ -260,21 +252,17 @@ class ApiService {
       'amount': amount,
     });
 
-    if (response.statusCode != 200) {
-      final body = _decodeBody(response);
+    final body = _decodeBody(response);
 
-      throw Exception(
-        _extractError(
-          body,
-          fallback: 'Transfer işlemi başarısız (${response.statusCode})',
-        ),
-      );
+    if (response.statusCode == 200) {
+      return TransactionModel.fromJson(body);
     }
 
-    return _getLatestTransaction(
-      accountId: fromAccountId,
-      type: 'TRANSFER',
-      amount: amount,
+    throw Exception(
+      _extractError(
+        body,
+        fallback: 'Transfer işlemi başarısız (${response.statusCode})',
+      ),
     );
   }
 
@@ -438,24 +426,6 @@ class ApiService {
   // ===========================================================================
   // PRIVATE
   // ===========================================================================
-
-  static Future<TransactionModel> _getLatestTransaction({
-    required int accountId,
-    required String type,
-    required double amount,
-  }) async {
-    final transactions = await getAccountTransactions(accountId);
-
-    for (final transaction in transactions) {
-      final sameAmount = (transaction.amount - amount).abs() < 0.01;
-
-      if (transaction.type == type && sameAmount) {
-        return transaction;
-      }
-    }
-
-    throw Exception('İşlem tamamlandı ancak dekont bilgisi alınamadı.');
-  }
 
   static Future<void> _ensureTokensLoaded() async {
     if (accessToken == null || refreshToken == null) {

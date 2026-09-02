@@ -286,6 +286,19 @@ class _TransactionsPageState extends State<TransactionsPage> {
                     _formatDate(transaction.createdAt),
                     style: const TextStyle(color: muted, fontSize: 11.5),
                   ),
+                  if (transaction.balanceAfter != null) ...[
+                    const SizedBox(height: 5),
+
+                    Text(
+                      'İşlem sonrası bakiye: '
+                      '${_formatMoney(transaction.balanceAfter!)}',
+                      style: const TextStyle(
+                        color: muted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

@@ -1568,6 +1568,20 @@ class _HomePageState extends State<HomePage> {
                 _transactionDate(transaction.createdAt),
                 style: const TextStyle(color: muted, fontSize: 12.5),
               ),
+
+              if (transaction.balanceAfter != null) ...[
+                const SizedBox(height: 5),
+
+                Text(
+                  'İşlem sonrası bakiye: '
+                  '${_formatMoney(transaction.balanceAfter!)}',
+                  style: const TextStyle(
+                    color: muted,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ],
           ),
         ),

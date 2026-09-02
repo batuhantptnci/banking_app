@@ -201,6 +201,16 @@ class TransactionDetailPage extends StatelessWidget {
             _divider(),
           ],
 
+          if (transaction.balanceAfter != null) ...[
+            _row(
+              'İşlem Sonrası Bakiye',
+              _formatMoney(transaction.balanceAfter!),
+              highlight: true,
+            ),
+
+            _divider(),
+          ],
+
           _row('Açıklama', transaction.description),
 
           _divider(),
